@@ -41,6 +41,14 @@ const UserContextProvider = (props) => {
     { code: 'phy', name: 'Physics', image: assets.phy, temp: 'Science and Technology' },
   ];
 
+  const getOrdinal = (n) => {
+    const suffixes = ['th', 'st', 'nd', 'rd'];
+    const v = n % 100;
+    const suffix =
+      v >= 11 && v <= 13 ? 'th' : suffixes[n % 10] || 'th';
+    return `${n}${suffix}`;
+  };
+
   // Fetch user details from backend using token
   const getUserDetails = async (currentToken) => {
     try {
@@ -89,7 +97,7 @@ const UserContextProvider = (props) => {
     token, setToken,
     loginComp, setLoginComp,
     showNavbar, setShowNavbar,
-    departments,
+    departments, getOrdinal,
     backendURL,
     userInfo, setUserInfo,
   };

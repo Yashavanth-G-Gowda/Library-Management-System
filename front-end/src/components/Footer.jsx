@@ -20,7 +20,7 @@ const Footer = () => {
 
         {/* Copyright */}
         <div className="text-center sm:text-right text-sm sm:text-base">
-          Copyright © JSS STU 2023. All rights reserved.
+          Copyright © JSS STU 2025. All rights reserved.
         </div>
       </div>
 

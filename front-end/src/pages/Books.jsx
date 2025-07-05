@@ -1,27 +1,25 @@
-// src/pages/Books.jsx
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { UserContext } from '../context/UserContext';
 import ShowBooks from '../components/bookComponents/ShowBooks';
+import ShowBookDetails from '../components/bookComponents/ShowBookDetails';
 
 const Books = () => {
   const { deptCode } = useParams();
   const navigate = useNavigate();
 
-  const { departments, books } = useContext(UserContext); // ✅ use books from context
+  const { departments, books } = useContext(UserContext);
+  const [selectedBook, setSelectedBook] = useState(null); // Modal state
 
   const department = departments.find((dept) => dept.code === deptCode);
 
-  const departmentBooks = books.filter((book) => {
-    // book.branch can be a string or array
-    return Array.isArray(book.branch)
+  const departmentBooks = books.filter((book) =>
+    Array.isArray(book.branch)
       ? book.branch.includes(deptCode)
-      : book.branch === deptCode;
-  });
+      : book.branch === deptCode
+  );
 
-  const handleBack = () => {
-    navigate(-1); // 👈 goes back to previous page
-  };
+  const handleBack = () => navigate(-1);
 
   if (!department) {
     return <div className="p-6 text-center text-red-600">Department not found.</div>;
@@ -69,19 +67,23 @@ const Books = () => {
       {departmentBooks.length === 0 ? (
         <p className="text-gray-500">No books found for this department.</p>
       ) : (
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 pl-5 gap-4">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-4 px-2 sm:px-4">
           {departmentBooks.map((book) => (
             <ShowBooks
               key={book._id}
-              id={book._id}
-              title={book.title}
-              author={book.author}
-              edition={book.edition}
-              status={book.status}
-              image={book.image}
+              book={book}
+              onClick={() => setSelectedBook(book)}
             />
           ))}
         </div>
+      )}
+
+      {/* Book Details Modal */}
+      {selectedBook && (
+        <ShowBookDetails
+          book={selectedBook}
+          onClose={() => setSelectedBook(null)}
+        />
       )}
     </div>
   );
