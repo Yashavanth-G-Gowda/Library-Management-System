@@ -119,4 +119,20 @@ const updateUserDetails = async (req, res) => {
   }
 }
 
-export {loginUser, registerUser, getUserDetails, updateUserDetails} 
+const adminLogin = async(req,res) => {
+    try {
+        const {userId,password} = req.body
+        if(userId === process.env.ADMIN_USERID && password === process.env.ADMIN_PASSWORD) {
+            const token = jwt.sign(userId+password,process.env.JWT_SECRET)
+            res.json({success:true,token})
+        }
+        else {
+            res.json({success:false,message:"Invalid credentials"})
+        }
+    } catch (error) {
+        console.log(error);
+        res.json({ success: false, message: error.message });
+    }
+}
+
+export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin} 
