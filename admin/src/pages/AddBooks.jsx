@@ -2,6 +2,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
 import { assets } from '../assets/assets';
 import { toast } from 'react-toastify';
+import AddBookConfirmation from '../component/AddBookConfirmation';
 
 const branchesList = [
   { code: 'cse', name: 'Computer Science and Engineering' },
@@ -28,6 +29,7 @@ const AddBooks = ({ token }) => {
     title: '',
     edition: '',
     author: '',
+    isbn: '',
     bookNumbers: [''],
     publisher: '',
     year: '',
@@ -40,6 +42,10 @@ const AddBooks = ({ token }) => {
   };
 
   const [formData, setFormData] = useState(defaultForm);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [duplicateBook, setDuplicateBook] = useState(null);
+  const [confirmed, setConfirmed] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (e) => {
     const { name, value, files } = e.target;
@@ -76,24 +82,43 @@ const AddBooks = ({ token }) => {
   };
 
   const handleSubmit = async (e) => {
-    e.preventDefault();
+    if (e?.preventDefault) e.preventDefault();
+    if (submitting) return;
+    setSubmitting(true);
+
+    // Manual required field validation
+    const isValid =
+      formData.title &&
+      formData.edition &&
+      formData.author &&
+      formData.isbn &&
+      formData.publisher &&
+      formData.year &&
+      formData.shelf &&
+      formData.row &&
+      formData.bookNumbers.every((num) => num.trim() !== '') &&
+      formData.tags.every((tag) => tag.trim() !== '') &&
+      formData.branches.length > 0 &&
+      (formData.imageFile || formData.imageURL);
+
+    if (!isValid) {
+      toast.error("⚠️ Please fill all required fields including image, branches, book numbers, and tags.");
+      setSubmitting(false);
+      return;
+    }
 
     const payload = new FormData();
-    payload.append('title', formData.title);
-    payload.append('edition', formData.edition);
-    payload.append('author', formData.author);
-    payload.append('bookNumbers', JSON.stringify(formData.bookNumbers));
-    payload.append('publisher', formData.publisher);
-    payload.append('year', formData.year);
-    payload.append('location', JSON.stringify({ shelf: formData.shelf, row: formData.row }));
-    payload.append('tags', JSON.stringify(formData.tags));
-    payload.append('branch', JSON.stringify(formData.branches));
-
-    if (formData.imageFile) {
-      payload.append('image', formData.imageFile);
-    } else if (formData.imageURL) {
-      payload.append('imageURL', formData.imageURL);
+    for (const key in formData) {
+      if (Array.isArray(formData[key])) {
+        payload.append(key, JSON.stringify(formData[key]));
+      } else if (key === 'imageFile' && formData.imageFile) {
+        payload.append('image', formData.imageFile);
+      } else {
+        payload.append(key, formData[key]);
+      }
     }
+    payload.append('location', JSON.stringify({ shelf: formData.shelf, row: formData.row }));
+    payload.append('confirmed', confirmed);
 
     try {
       const res = await axios.post(
@@ -101,50 +126,56 @@ const AddBooks = ({ token }) => {
         payload,
         { headers: { token, 'Content-Type': 'multipart/form-data' } }
       );
-      toast.success(res.data.message || "Book added successfully!");
-      setFormData(defaultForm);
+
+      if (res.data.duplicate && !confirmed) {
+        setDuplicateBook(res.data.book);
+        setShowConfirmModal(true);
+        setSubmitting(false);
+        return;
+      }
+
+      if (res.data.success) {
+        toast.success(res.data.message || "Book added successfully!");
+        setFormData(defaultForm);
+        setConfirmed(false);
+        setDuplicateBook(null);
+      } else {
+        toast.error(res.data.message || "Failed to add book.");
+      }
     } catch (err) {
-      console.error(err);
-      toast.error(err.response?.data?.message || "Something went wrong while adding book.");
+      console.error("Submit Error:", err);
+      toast.error("Error while adding book.");
+    } finally {
+      setSubmitting(false);
     }
   };
 
+  useEffect(() => {
+    if (confirmed) {
+      handleSubmit();
+    }
+  }, [confirmed]);
+
   return (
-    <div className="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-md mt-6">
+    <div className="max-w-5xl mx-auto p-6 bg-white shadow-md rounded-md mt-4">
       <h2 className="text-2xl font-semibold mb-6 text-gray-800">➕ Add a New Book</h2>
       <form onSubmit={handleSubmit} className="space-y-5">
-
         <div className="grid md:grid-cols-2 gap-4">
-          <Input label="Title" name="title" value={formData.title} onChange={handleChange} />
-          <Input label="Edition" name="edition" type="number" value={formData.edition} onChange={handleChange} />
-          <Input label="Author" name="author" value={formData.author} onChange={handleChange} />
-          <Input label="Publisher" name="publisher" value={formData.publisher} onChange={handleChange} />
-          <Input label="Year" name="year" type="number" value={formData.year} onChange={handleChange} />
-          <Input label="Shelf" name="shelf" value={formData.shelf} onChange={handleChange} />
-          <Input label="Row" name="row" value={formData.row} onChange={handleChange} />
+          <Input label="Title" name="title" value={formData.title} onChange={handleChange} required />
+          <Input label="Edition" name="edition" type="number" value={formData.edition} onChange={handleChange} required />
+          <Input label="Author" name="author" value={formData.author} onChange={handleChange} required />
+          <Input label="ISBN" name="isbn" value={formData.isbn} onChange={handleChange} required />
+          <Input label="Publisher" name="publisher" value={formData.publisher} onChange={handleChange} required />
+          <Input label="Year" name="year" type="number" value={formData.year} onChange={handleChange} required />
+          <Input label="Shelf" name="shelf" value={formData.shelf} onChange={handleChange} required />
+          <Input label="Row" name="row" value={formData.row} onChange={handleChange} required />
         </div>
 
-        <DynamicField
-          label="Book Numbers"
-          field="bookNumbers"
-          values={formData.bookNumbers}
-          onChange={handleDynamicChange}
-          onAdd={addDynamicField}
-          onRemove={removeDynamicField}
-        />
+        <DynamicField label="Book Numbers" field="bookNumbers" values={formData.bookNumbers} onChange={handleDynamicChange} onAdd={addDynamicField} onRemove={removeDynamicField} required />
+        <DynamicField label="Tags" field="tags" values={formData.tags} onChange={handleDynamicChange} onAdd={addDynamicField} onRemove={removeDynamicField} required />
 
-        <DynamicField
-          label="Tags"
-          field="tags"
-          values={formData.tags}
-          onChange={handleDynamicChange}
-          onAdd={addDynamicField}
-          onRemove={removeDynamicField}
-        />
-
-        {/* Branch Checkboxes */}
         <div>
-          <label className="block font-medium text-sm text-gray-700 mb-1">Select Branches</label>
+          <label className="block font-medium text-sm text-gray-700 mb-1">Select Branches <span className="text-red-500">*</span></label>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm text-gray-600">
             {branchesList.map(branch => (
               <label key={branch.code} className="flex items-center gap-2">
@@ -160,9 +191,8 @@ const AddBooks = ({ token }) => {
           </div>
         </div>
 
-        {/* Image Upload */}
         <div>
-          <p className="mb-2 font-medium text-sm text-gray-700">Upload Book Image</p>
+          <p className="mb-2 font-medium text-sm text-gray-700">Upload Book Image <span className="text-red-500">*</span></p>
           <div className="flex items-center gap-4">
             <label htmlFor="imageFile">
               <img
@@ -180,9 +210,7 @@ const AddBooks = ({ token }) => {
                 name="imageFile"
                 accept="image/*"
                 hidden
-                onChange={(e) =>
-                  setFormData({ ...formData, imageFile: e.target.files[0] })
-                }
+                onChange={(e) => setFormData({ ...formData, imageFile: e.target.files[0] })}
               />
             </label>
           </div>
@@ -194,26 +222,40 @@ const AddBooks = ({ token }) => {
           Add Book
         </button>
       </form>
+
+      {showConfirmModal && (
+        <AddBookConfirmation
+          existingBook={duplicateBook}
+          onCancel={() => {
+            setShowConfirmModal(false);
+            setConfirmed(false);
+          }}
+          onConfirm={() => {
+            setShowConfirmModal(false);
+            setConfirmed(true); // triggers resubmission
+          }}
+        />
+      )}
     </div>
   );
 };
 
-const Input = ({ label, name, value, onChange, type = "text" }) => (
+const Input = ({ label, name, value, onChange, type = "text", required }) => (
   <div className="flex flex-col text-sm">
-    <label className="font-medium mb-1 text-gray-700">{label}</label>
+    <label className="font-medium mb-1 text-gray-700">{label} {required && <span className="text-red-500">*</span>}</label>
     <input
       type={type}
       name={name}
       value={value}
       onChange={onChange}
+      required={required}
       className="border border-gray-300 p-2 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 text-gray-700"
     />
   </div>
 );
 
-const DynamicField = ({ label, field, values, onChange, onAdd, onRemove }) => {
+const DynamicField = ({ label, field, values, onChange, onAdd, onRemove, required }) => {
   const inputRefs = useRef([]);
-
   useEffect(() => {
     inputRefs.current = inputRefs.current.slice(0, values.length);
   }, [values]);
@@ -228,11 +270,12 @@ const DynamicField = ({ label, field, values, onChange, onAdd, onRemove }) => {
 
   return (
     <div className="mb-4">
-      <label className="block font-medium mb-1 text-gray-700">{label}</label>
+      <label className="block font-medium mb-1 text-gray-700">{label} {required && <span className="text-red-500">*</span>}</label>
       <div className="flex flex-wrap gap-2">
         {values.map((val, i) => (
           <div key={i} className="relative w-32">
             <input
+              required={required}
               ref={(el) => inputRefs.current[i] = el}
               type="text"
               value={val}

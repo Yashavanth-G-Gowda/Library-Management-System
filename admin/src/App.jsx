@@ -5,8 +5,10 @@ import Navbar from './component/Navbar';
 import SideBar from './component/SideBar';
 import AddBooks from './pages/AddBooks';
 import ListBooks from './pages/ListBooks';
-import Orders from './pages/Orders';
 import {Routes,Route} from 'react-router-dom'
+import ListUsers from './pages/ListUsers';
+import IssueBook from './pages/IssueBook';
+import BorrowedBooks from './pages/BorrowedBooks';
 
 export const backendURL = import.meta.env.VITE_BACKEND_URL
 
@@ -37,12 +39,13 @@ const App = () => {
             <SideBar />
             
             {/* Content Area */}
-            <div className='ml-[18%] w-[82%] px-6 py-8 text-gray-600 text-base'>
+            <div className='ml-[18%] w-[82%] px-6 py-2 text-gray-600 text-base'>
               <Routes>
                 <Route path='/addbooks' element={<AddBooks token={token} />} />
                 <Route path='/listbooks' element={<ListBooks token={token} />} />
-                <Route path='/removebooks' element={<Orders token={token} />} />
-                <Route path='/' />
+                <Route path='/listusers' element={<ListUsers token={token} />} />
+                <Route path='/issuebook' element={<IssueBook token={token}/>} />
+                <Route path='/borrowed' element={<BorrowedBooks token={token}/>} />
               </Routes>
             </div>
           </div>

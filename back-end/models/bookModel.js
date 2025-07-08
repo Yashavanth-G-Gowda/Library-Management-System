@@ -5,6 +5,7 @@ const booksSchema = new mongoose.Schema(
     title: { type: String, required: true },
     edition: { type: Number, required: true },
     author: { type: String, required: true },
+    isbn:{type: String, required: true, unique:true},
     branch: { type: [String], required: true },
 
     copies: { type: Number }, // auto-calculated, not required from frontend

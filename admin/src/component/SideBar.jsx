@@ -9,10 +9,16 @@ const SideBar = () => {
           <p className='hidden md:block'>Add Books</p>
         </NavLink>
         <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/listbooks'>
-          <p className='hidden md:block'>List Items</p>
+          <p className='hidden md:block'>List Books</p>
         </NavLink>
-        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/removebooks'>
-          <p className='hidden md:block'>Order Item</p>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/listusers'>
+          <p className='hidden md:block'>List Users</p>
+        </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/issuebook'>
+          <p className='hidden md:block'>Issue Book</p>
+        </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/borrowed'>
+          <p className='hidden md:block'>Borrowed Books</p>
         </NavLink>
       </div>
     </div>

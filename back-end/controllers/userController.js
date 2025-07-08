@@ -119,6 +119,16 @@ const updateUserDetails = async (req, res) => {
   }
 }
 
+const getAllUsers = async (req, res) => {
+  try {
+    const users = await UserModel.find(); // Fetch all users
+    res.status(200).json({ success: true, users });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({ success: false, message: 'Server Error' });
+  }
+};
+
 const adminLogin = async(req,res) => {
     try {
         const {userId,password} = req.body
@@ -135,4 +145,4 @@ const adminLogin = async(req,res) => {
     }
 }
 
-export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin} 
+export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers} 

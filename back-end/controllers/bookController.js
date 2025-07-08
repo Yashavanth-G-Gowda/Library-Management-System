@@ -5,94 +5,138 @@ import fs from "fs";
 const addBooks = async (req, res) => {
   try {
     const {
-      title,
-      edition,
-      author,
-      branch,
-      copies,
-      bookNumbers,
-      availableBookNumbers,
-      publisher,
-      year,
-      location,
-      tags,
-      imageURL
+      title, edition, author, isbn, publisher, year,
+      tags, bookNumbers, branch, location, confirmed
     } = req.body;
 
+    if (!title || !isbn || !bookNumbers) {
+      return res.status(400).json({ success: false, message: "Missing required fields." });
+    }
+
+    const parsedTags = JSON.parse(tags || '[]');
+    const parsedNumbers = JSON.parse(bookNumbers || '[]');
+    const parsedBranches = JSON.parse(branch || '[]');
+    const parsedLocation = JSON.parse(location || '{}');
+    const isConfirmed = JSON.parse(confirmed || 'false');
+
+    const existingBook = await BookModel.findOne({ isbn });
+
+    if (existingBook && !isConfirmed) {
+      return res.json({ duplicate: true, book: existingBook });
+    }
+
+    if (existingBook && isConfirmed) {
+      const existingSet = new Set(existingBook.bookNumbers);
+      const newBookNumbers = parsedNumbers.filter(bn => !existingSet.has(bn));
+      existingBook.bookNumbers.push(...newBookNumbers);
+      existingBook.availableBookNumbers.push(...newBookNumbers);
+      await existingBook.save();
+      return res.json({ success: true, message: "Book numbers appended to existing book." });
+    }
+
+    // ----------------------------
+    // 🖼️ Upload image to Cloudinary
+    // ----------------------------
     let image = '';
-
-    // ✅ OPTION 1: User uploaded a file
-    if (req.files?.image?.[0]) {
-      const uploadedFile = req.files.image[0];
-
-      const result = await cloudinary.uploader.upload(uploadedFile.path, {
-        resource_type: 'image',
-        folder: 'library-books',
+    if (req?.files?.image?.[0]?.path) {
+      const result = await cloudinary.uploader.upload(req.files.image[0].path, {
+        folder: 'library_books',
       });
-
       image = result.secure_url;
-
-      // ✅ Delete local file after upload to Cloudinary
-      fs.unlink(uploadedFile.path, (err) => {
-        if (err) {
-          console.error("Error deleting local file:", err.message);
-        }
-      });
+    } else if (req.body.imageURL) {
+      image = req.body.imageURL; // fallback if image URL is provided instead
     }
 
-    // ✅ OPTION 2: User provided an image URL
-    else if (imageURL) {
-      image = imageURL;
-    }
-
-    // ❌ No image given
-    else {
-      return res.json({
-        success: false,
-        message: "Please upload an image or provide an image URL",
-      });
-    }
-
-    // 🧠 Parse stringified inputs
-    const parsedBranches = typeof branch === 'string' ? JSON.parse(branch) : branch;
-    const parsedBookNumbers = typeof bookNumbers === 'string' ? JSON.parse(bookNumbers) : bookNumbers;
-    const parsedAvailable = typeof availableBookNumbers === 'string' ? JSON.parse(availableBookNumbers) : availableBookNumbers;
-    const parsedTags = tags ? (typeof tags === 'string' ? JSON.parse(tags) : tags) : [];
-    const parsedLocation = typeof location === 'string' ? JSON.parse(location) : location;
-
-    // 📦 Create new book instance
     const newBook = new BookModel({
       title,
       edition,
       author,
-      branch: parsedBranches,
-      copies,
-      bookNumbers: parsedBookNumbers,
-      availableBookNumbers: parsedAvailable,
-      issuedBookNumbers: [],
+      isbn,
       publisher,
       year,
-      image,
-      location: parsedLocation,
       tags: parsedTags,
+      bookNumbers: parsedNumbers,
+      availableBookNumbers: parsedNumbers,
+      branch: parsedBranches,
+      location: parsedLocation,
+      image,
     });
 
-    // 💾 Save to DB
     await newBook.save();
-
-    return res.json({
-      success: true,
-      message: 'Book added successfully',
-      book: newBook
-    });
-
-  } catch (error) {
-    console.error("Add Book Error:", error);
-    return res.json({
-      success: false,
-      message: "Internal Server Error"
-    });
+    return res.json({ success: true, message: "New book added successfully!" });
+  } catch (err) {
+    console.error("Error in addBooks:", err);
+    return res.status(500).json({ success: false, message: "Server error while adding book." });
   }
 };
 
-export { addBooks };
+// Route to list all the books
+const listBooks =async(req, res) => {
+  try {
+    const books = await BookModel.find();
+    res.json({ success: true, books });
+  } catch (error) {
+    console.error("Error fetching books:", error.message);
+    res.json({ success: false, message: "Internal Server Error" });
+  }
+}
+
+const deleteBooks = async (req, res) => {
+  try {
+    const { id, bookNumbers = [], all = false } = req.body;
+
+    const book = await BookModel.findById(id);
+    if (!book) {
+      return res.json({ success: false, message: "Book not found" });
+    }
+
+    // Delete all copies of the book
+    if (all) {
+      await BookModel.findByIdAndDelete(id);
+      return res.json({ success: true, message: "All copies of the book deleted successfully." });
+    }
+
+    // Delete selected bookNumbers
+    const updatedBookNumbers = book.bookNumbers.filter(bn => !bookNumbers.includes(bn));
+    const updatedAvailable = book.availableBookNumbers.filter(bn => !bookNumbers.includes(bn));
+
+    // If no copies remain, delete the book entirely
+    if (updatedBookNumbers.length === 0) {
+      await BookModel.findByIdAndDelete(id);
+      return res.json({ success: true, message: "All selected books deleted. No copies remain." });
+    }
+
+    // Otherwise, update the book
+    book.bookNumbers = updatedBookNumbers;
+    book.availableBookNumbers = updatedAvailable;
+    await book.save();
+
+    return res.json({ success: true, message: "Selected copies deleted successfully." });
+
+  } catch (error) {
+    console.error("Error deleting book(s):", error.message);
+    return res.status(500).json({ success: false, message: "Error deleting selected book(s)." });
+  }
+};
+
+const checkISBN = async (req, res) => {
+  const { isbn } = req.body;
+
+  if (!isbn) {
+    return res.status(400).json({ success: false, message: "ISBN is required" });
+  }
+
+  try {
+    const book = await BookModel.findOne({ isbn });
+    if (book) {
+      return res.json({ success: true, book });
+    } else {
+      return res.json({ success: false, message: "No book with this ISBN found." });
+    }
+  } catch (err) {
+    console.error("checkISBN error:", err);
+    return res.status(500).json({ success: false, message: "Error checking ISBN" });
+  }
+};
+
+export { addBooks, listBooks, deleteBooks, checkISBN };
