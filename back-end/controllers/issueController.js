@@ -57,6 +57,7 @@ const issueBook = async (req, res) => {
     // ✅ Properly update Map using `.set`
     user.set(`booksBorrowed.${issuedBookNumber}`, {
       isbn,
+      issuedDate: newIssued.issuedDate,
       returnDate: newIssued.returnDate,
     });
 

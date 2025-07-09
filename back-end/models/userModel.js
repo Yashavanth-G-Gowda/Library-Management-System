@@ -13,6 +13,7 @@ const userSchema = new mongoose.Schema({
     type: Map,
     of: new mongoose.Schema({
       isbn: { type: String, required: true },
+      issuedDate: { type: String, required: true },
       returnDate: { type: String, required: true }
     }, { _id: false }),
     default: {}

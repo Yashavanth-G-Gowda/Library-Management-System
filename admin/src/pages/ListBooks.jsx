@@ -60,23 +60,43 @@ const ListBooks = ({ token }) => {
     }
   };
 
-
   const filteredBooks = books.filter(book =>
     book.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    book.author.toLowerCase().includes(searchQuery.toLowerCase())
+    book.author.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    book.isbn?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   useEffect(() => {
     fetchBooks();
   }, []);
 
+  // Listen for custom event to refresh books
+  useEffect(() => {
+    const handleBookAdded = () => {
+      fetchBooks();
+    };
+
+    window.addEventListener('bookAdded', handleBookAdded);
+    return () => {
+      window.removeEventListener('bookAdded', handleBookAdded);
+    };
+  }, []);
+
   return (
-    <div className="max-w-6xl mx-auto px-4 py-4">
-      <h2 className="text-2xl font-semibold mb-4 text-gray-800">📖 Book List</h2>
+    <div className="max-w-7xl mx-auto px-4 py-4">
+      <div className="flex justify-between items-center mb-4">
+        <h2 className="text-2xl font-semibold text-gray-800">📖 Book List</h2>
+        <button
+          onClick={fetchBooks}
+          className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 text-sm flex items-center gap-2"
+        >
+          🔄 Refresh
+        </button>
+      </div>
 
       <input
         type="text"
-        placeholder="🔍 Search by title or author..."
+        placeholder="🔍 Search by title, author, or ISBN..."
         value={searchQuery}
         onChange={(e) => setSearchQuery(e.target.value)}
         className="border p-2 rounded w-full mb-4 focus:outline-none focus:ring-1 focus:ring-blue-500"
@@ -90,6 +110,7 @@ const ListBooks = ({ token }) => {
               <th className="p-3 border">Title</th>
               <th className="p-3 border">Author</th>
               <th className="p-3 border">Edition</th>
+              <th className="p-3 border">ISBN</th>
               <th className="p-3 border text-center">Total Books</th>
               <th className="p-3 border text-center">Available Books</th>
               <th className="p-3 border text-center">Actions</th>
@@ -106,11 +127,12 @@ const ListBooks = ({ token }) => {
                       className="w-14 h-20 object-cover rounded"
                     />
                   </td>
-                  <td className="p-3 border">{book.title}</td>
+                  <td className="p-3 border font-medium">{book.title}</td>
                   <td className="p-3 border">{book.author}</td>
                   <td className="p-3 border">{getOrdinal(book.edition)}</td>
-                  <td className="p-3 border text-center">{book.bookNumbers?.length ?? 0}</td>
-                  <td className="p-3 border text-center">{book.availableBookNumbers?.length ?? 0}</td>
+                  <td className="p-3 border font-mono text-xs">{book.isbn}</td>
+                  <td className="p-3 border text-center font-semibold">{book.bookNumbers?.length ?? 0}</td>
+                  <td className="p-3 border text-center font-semibold text-green-600">{book.availableBookNumbers?.length ?? 0}</td>
                   <td className="p-3 border text-center">
                     <div className="flex flex-col items-center gap-2">
                       <button
@@ -131,7 +153,7 @@ const ListBooks = ({ token }) => {
               ))
             ) : (
               <tr>
-                <td colSpan="7" className="text-center py-6 text-gray-500">
+                <td colSpan="8" className="text-center py-6 text-gray-500">
                   No books found.
                 </td>
               </tr>

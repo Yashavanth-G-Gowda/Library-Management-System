@@ -3,6 +3,7 @@ import profile_icon from '../assets/navbarItems/profileIcons/profile-icon.png'
 import search_icon from '../assets/navbarItems/search-icon.png'
 import voice_search_icon from '../assets/navbarItems/voice-search-icon.jpg'
 import jssstulogo from '../assets/jssstulogo.jpg'
+import book_placeholder from '../assets/books/cseBooks/dsd-7.jpg'
 
 import mic from '../assets/SerachbarItems/mic-icon.png'
 import back from '../assets/SerachbarItems/back-arrow.jpg'
@@ -34,7 +35,7 @@ import phy from '../assets/departments/PHY.png'
 export const assets = {
 
     // Navbar items
-    logo, profile_icon, search_icon, voice_search_icon,no_notify,notify,jssstulogo,
+    logo, profile_icon, search_icon, voice_search_icon,no_notify,notify,jssstulogo, book_placeholder,
 
     // Bottom Navbar items
     home_bottom,books_bottom, profile_bottom,

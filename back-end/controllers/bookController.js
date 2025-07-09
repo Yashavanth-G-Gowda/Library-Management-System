@@ -1,6 +1,8 @@
 import BookModel from "../models/bookModel.js";
 import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs";
+import UserModel from "../models/userModel.js";
+import nodemailer from 'nodemailer';
 
 const addBooks = async (req, res) => {
   try {
@@ -66,6 +68,37 @@ const addBooks = async (req, res) => {
     });
 
     await newBook.save();
+
+    // --- EMAIL ALL USERS ---
+    try {
+      const users = await UserModel.find({}, 'email');
+      const emailList = users.map(user => user.email).filter(Boolean);
+      if (emailList.length > 0) {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.GMAIL_USER,
+            pass: process.env.GMAIL_PASS
+          }
+        });
+        const mailOptions = {
+          from: process.env.GMAIL_USER,
+          to: emailList, // can be array or comma-separated string
+          subject: 'New Book Added to Library',
+          text: `A new book titled "${title}" by ${author} has been added to the library! Check it out!`
+        };
+        transporter.sendMail(mailOptions, (error, info) => {
+          if (error) {
+            console.error('Error sending emails:', error);
+          } else {
+            console.log('Emails sent:', info.response);
+          }
+        });
+      }
+    } catch (emailErr) {
+      console.error('Error in sending notification emails:', emailErr);
+    }
+
     return res.json({ success: true, message: "New book added successfully!" });
 
   } catch (err) {
@@ -166,4 +199,22 @@ const getBookByNumber = async (req, res) => {
   }
 };
 
-export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber };
+const getBookByISBN = async (req, res) => {
+  const { isbn } = req.params;
+
+  try {
+    const book = await BookModel.findOne({ isbn });
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Book not found." });
+    }
+
+    return res.status(200).json({ success: true, book });
+
+  } catch (err) {
+    console.error("Get Book by ISBN Error:", err);
+    return res.status(500).json({ success: false, message: "Server error while fetching book." });
+  }
+};
+
+export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber, getBookByISBN };

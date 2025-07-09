@@ -92,6 +92,11 @@ const IssueBook = ({ token }) => {
         setBook(null);
         setUserError('');
         setBookError('');
+        
+        // Dispatch custom event to refresh user profile
+        window.dispatchEvent(new CustomEvent('bookIssued', {
+          detail: { srn: srn.trim() }
+        }));
       } else {
         toast.error(res.data.message || 'Failed to issue book');
       }

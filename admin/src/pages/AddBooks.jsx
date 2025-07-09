@@ -139,6 +139,9 @@ const AddBooks = ({ token }) => {
         setFormData(defaultForm);
         setConfirmed(false);
         setDuplicateBook(null);
+        
+        // Dispatch custom event to refresh ListBooks
+        window.dispatchEvent(new CustomEvent('bookAdded'));
       } else {
         toast.error(res.data.message || "Failed to add book.");
       }

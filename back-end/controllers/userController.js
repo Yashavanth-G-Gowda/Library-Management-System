@@ -144,6 +144,54 @@ const getUserBySRN = async (req, res) => {
   }
 };
 
+const getUserWithBorrowedBooks = async (req, res) => {
+  try {
+    const token = req.headers.token;
+    if (!token) return res.json({ success: false, message: 'No token provided' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await UserModel.findById(decoded.id).select('-password');
+
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Convert booksBorrowed Map to array for easier frontend handling
+    const borrowedBooks = [];
+    if (user.booksBorrowed && user.booksBorrowed.size > 0) {
+      for (const [bookNumber, bookData] of user.booksBorrowed.entries()) {
+        // Calculate fine for overdue books
+        let fine = 0;
+        const today = new Date();
+        const [month, day, year] = bookData.returnDate.split('-').map(Number);
+        const dueDate = new Date(year, month - 1, day);
+        
+        if (today > dueDate) {
+          const daysOverdue = Math.floor((today - dueDate) / (1000 * 60 * 60 * 24));
+          fine = daysOverdue * 1; // ₹1 per day
+        }
+
+        borrowedBooks.push({
+          bookNumber,
+          isbn: bookData.isbn,
+          issuedDate: bookData.issuedDate,
+          returnDate: bookData.returnDate,
+          fine: fine
+        });
+      }
+    }
+
+    res.json({ 
+      success: true, 
+      user: {
+        ...user.toObject(),
+        borrowedBooks
+      }
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 const adminLogin = async(req,res) => {
     try {
         const {userId,password} = req.body
@@ -160,4 +208,4 @@ const adminLogin = async(req,res) => {
     }
 }
 
-export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers, getUserBySRN} 
+export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers, getUserBySRN, getUserWithBorrowedBooks} 
