@@ -1,6 +1,5 @@
 import { createContext, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { books } from "../assets/bookAssets";
 import { assets } from "../assets/assets";
 import { toast } from 'react-toastify';
 import axios from 'axios';
@@ -8,6 +7,7 @@ import axios from 'axios';
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
 export const UserContext = createContext();
+
 
 const UserContextProvider = (props) => {
   const navigate = useNavigate();
@@ -19,6 +19,21 @@ const UserContextProvider = (props) => {
   const [loginComp, setLoginComp] = useState(false);
   const [showNavbar, setShowNavbar] = useState(true);
   const [userInfo, setUserInfo] = useState(null);
+  const [books, setBooks] = useState([])
+
+  // get book information
+  const getAllBooks = async() => {
+    try {
+      const response = await axios.get(backendURL + '/api/books/allBooks')
+      if(response.data.success){
+        setBooks(response.data.books)
+      }
+      else toast.error(response.data.message)
+    } catch (error) {
+      console.log(error);
+      toast.error(error.message)
+    }
+  } 
 
   // Department List
   const departments = [
@@ -87,6 +102,10 @@ const UserContextProvider = (props) => {
       getUserDetails(token);
     }
   }, [token]);
+
+  useEffect(()=> {
+    getAllBooks();
+  },[])
 
   // Provide all context values
   const value = {
