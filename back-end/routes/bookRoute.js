@@ -1,6 +1,6 @@
 import express from 'express'
 import adminAuth from '../middleware/adminAuth.js'
-import { addBooks, deleteBooks, listBooks, checkISBN, getBookByNumber, getBookByISBN } from '../controllers/bookController.js';
+import { addBooks, deleteBooks, listBooks, checkISBN, getBookByNumber, getBookByISBN, editBook } from '../controllers/bookController.js';
 import upload from '../middleware/multer.js'
 
 const bookRouter = express.Router()
@@ -17,5 +17,6 @@ bookRouter.post('/deleteSelected', adminAuth, deleteBooks);
 bookRouter.post('/checkISBN', adminAuth, checkISBN);
 bookRouter.get('/number/:bookNumber', getBookByNumber);
 bookRouter.get('/isbn/:isbn', getBookByISBN);
+bookRouter.put('/edit/:isbn', upload.single('image'), adminAuth, editBook);
 
 export default bookRouter 

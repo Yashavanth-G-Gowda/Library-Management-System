@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import DeleteConfirmation from '../component/DeleteConfirmation';
+import EditBook from '../component/EditBook'; // 👈 New import
 
 const getOrdinal = (n) => {
   const s = ["th", "st", "nd", "rd"];
@@ -13,6 +14,7 @@ const ListBooks = ({ token }) => {
   const [books, setBooks] = useState([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedBook, setSelectedBook] = useState(null);
+  const [editingBook, setEditingBook] = useState(null); // 👈 For edit modal
 
   const fetchBooks = async () => {
     try {
@@ -42,7 +44,7 @@ const ListBooks = ({ token }) => {
         {
           headers: {
             token,
-            'Content-Type': 'application/json', // ✅ ensure correct content-type
+            'Content-Type': 'application/json',
           },
         }
       );
@@ -70,16 +72,10 @@ const ListBooks = ({ token }) => {
     fetchBooks();
   }, []);
 
-  // Listen for custom event to refresh books
   useEffect(() => {
-    const handleBookAdded = () => {
-      fetchBooks();
-    };
-
+    const handleBookAdded = () => fetchBooks();
     window.addEventListener('bookAdded', handleBookAdded);
-    return () => {
-      window.removeEventListener('bookAdded', handleBookAdded);
-    };
+    return () => window.removeEventListener('bookAdded', handleBookAdded);
   }, []);
 
   return (
@@ -136,7 +132,7 @@ const ListBooks = ({ token }) => {
                   <td className="p-3 border text-center">
                     <div className="flex flex-col items-center gap-2">
                       <button
-                        onClick={() => toast.info("Edit coming soon")}
+                        onClick={() => setEditingBook(book)}
                         className="px-3 py-1 bg-yellow-400 text-white rounded hover:bg-yellow-500 text-sm w-20"
                       >
                         ✏️ Edit
@@ -167,6 +163,15 @@ const ListBooks = ({ token }) => {
           book={selectedBook}
           onCancel={() => setSelectedBook(null)}
           onConfirm={confirmDelete}
+        />
+      )}
+
+      {editingBook && (
+        <EditBook
+          book={editingBook}
+          token={token}
+          onClose={() => setEditingBook(null)}
+          onSuccess={fetchBooks}
         />
       )}
     </div>

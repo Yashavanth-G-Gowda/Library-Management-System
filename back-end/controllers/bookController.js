@@ -217,4 +217,56 @@ const getBookByISBN = async (req, res) => {
   }
 };
 
-export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber, getBookByISBN };
+const editBook = async (req, res) => {
+  const { isbn } = req.params;
+  const updates = req.body;
+
+  if (!isbn) {
+    return res.status(400).json({ success: false, message: "ISBN is required" });
+  }
+
+  try {
+    const book = await BookModel.findOne({ isbn });
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Book not found" });
+    }
+
+    // ✅ Handle image upload (if any)
+    if (req.file) {
+      const imagePath = `/uploads/${req.file.filename}`;
+      updates.image = imagePath;
+    }
+
+    // ✅ Update only allowed fields
+    const updatableFields = [
+      'title',
+      'author',
+      'edition',
+      'publisher',
+      'year',
+      'shelf',
+      'row',
+      'image',
+    ];
+
+    updatableFields.forEach(field => {
+      if (updates[field] !== undefined && updates[field] !== '') {
+        book[field] = updates[field];
+      }
+    });
+
+    await book.save();
+
+    res.status(200).json({
+      success: true,
+      message: 'Book updated successfully',
+      book,
+    });
+  } catch (err) {
+    console.error('❌ EditBook Error:', err);
+    res.status(500).json({ success: false, message: 'Server error while updating book' });
+  }
+};
+
+export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber, getBookByISBN, editBook };
