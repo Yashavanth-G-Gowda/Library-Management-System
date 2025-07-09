@@ -1,24 +1,48 @@
 import mongoose from "mongoose";
 
+const uniqueArrayValidator = (arr) => new Set(arr).size === arr.length;
+
 const booksSchema = new mongoose.Schema(
   {
     title: { type: String, required: true },
     edition: { type: Number, required: true },
     author: { type: String, required: true },
-    isbn:{type: String, required: true, unique:true},
+    isbn: { type: String, required: true },
+
     branch: { type: [String], required: true },
 
-    copies: { type: Number }, // auto-calculated, not required from frontend
+    bookNumbers: {
+      type: [String],
+      required: true,
+      validate: {
+        validator: uniqueArrayValidator,
+        message: "bookNumbers must contain unique values",
+      },
+    },
 
-    bookNumbers: { type: [String], required: true },
     availableBookNumbers: {
       type: [String],
-      validate: {
-        validator: Array.isArray,
-        message: 'availableBookNumbers must be an array'
-      }
+      required: true,
+      validate: [
+        {
+          validator: Array.isArray,
+          message: "availableBookNumbers must be an array",
+        },
+        {
+          validator: uniqueArrayValidator,
+          message: "availableBookNumbers must contain unique values",
+        },
+      ],
     },
-    issuedBookNumbers: { type: [String], default: [] },
+
+    issuedBookNumbers: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: uniqueArrayValidator,
+        message: "issuedBookNumbers must contain unique values",
+      },
+    },
 
     publisher: { type: String },
     year: { type: Number },
@@ -27,48 +51,23 @@ const booksSchema = new mongoose.Schema(
 
     location: {
       shelf: { type: String, required: true },
-      row: { type: String, required: true }
+      row: { type: String, required: true },
     },
 
-    tags: { type: Array }
+    tags: { type: Array, default: [] }
   },
-  { timestamps: true }
+  {
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true },
+  }
 );
 
-// ✅ Auto-set availableBookNumbers = bookNumbers if not given
-booksSchema.pre('save', function (next) {
-  if (!this.availableBookNumbers || this.availableBookNumbers.length === 0) {
-    this.availableBookNumbers = [...this.bookNumbers];
-  }
-
-  this.copies = this.availableBookNumbers.length;
-  next();
+// ✅ Virtual: Book status (based on availability)
+booksSchema.virtual("status").get(function () {
+  return this.availableBookNumbers?.length > 0 ? "available" : "unavailable";
 });
 
-// ✅ Recalculate copies on update
-booksSchema.pre('findOneAndUpdate', function (next) {
-  const update = this.getUpdate();
-
-  if (update.bookNumbers && (!update.availableBookNumbers || update.availableBookNumbers.length === 0)) {
-    update.availableBookNumbers = [...update.bookNumbers];
-  }
-
-  if (update.availableBookNumbers) {
-    update.copies = update.availableBookNumbers.length;
-  }
-
-  this.setUpdate(update);
-  next();
-});
-
-// 📌 Virtual 'status' field (available/unavailable)
-booksSchema.virtual('status').get(function () {
-  return this.availableBookNumbers?.length > 0 ? 'available' : 'unavailable';
-});
-
-// Include virtuals in toJSON output
-booksSchema.set('toJSON', { virtuals: true });
-
+// ✅ Export model
 const BookModel = mongoose.models.Books || mongoose.model("Books", booksSchema);
-
 export default BookModel;

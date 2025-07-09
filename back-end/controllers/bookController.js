@@ -6,19 +6,21 @@ const addBooks = async (req, res) => {
   try {
     const {
       title, edition, author, isbn, publisher, year,
-      tags, bookNumbers, branch, location, confirmed
+      tags, bookNumbers, branches, location, confirmed
     } = req.body;
 
     if (!title || !isbn || !bookNumbers) {
       return res.status(400).json({ success: false, message: "Missing required fields." });
     }
 
+    // ✅ Parse incoming fields
     const parsedTags = JSON.parse(tags || '[]');
     const parsedNumbers = JSON.parse(bookNumbers || '[]');
-    const parsedBranches = JSON.parse(branch || '[]');
+    const parsedBranches = JSON.parse(branches || '[]'); // ✅ fixed here
     const parsedLocation = JSON.parse(location || '{}');
     const isConfirmed = JSON.parse(confirmed || 'false');
 
+    // ✅ Check for existing book
     const existingBook = await BookModel.findOne({ isbn });
 
     if (existingBook && !isConfirmed) {
@@ -35,7 +37,7 @@ const addBooks = async (req, res) => {
     }
 
     // ----------------------------
-    // 🖼️ Upload image to Cloudinary
+    // 📤 Upload image to Cloudinary
     // ----------------------------
     let image = '';
     if (req?.files?.image?.[0]?.path) {
@@ -47,6 +49,7 @@ const addBooks = async (req, res) => {
       image = req.body.imageURL; // fallback if image URL is provided instead
     }
 
+    // ✅ Create new book
     const newBook = new BookModel({
       title,
       edition,
@@ -57,13 +60,14 @@ const addBooks = async (req, res) => {
       tags: parsedTags,
       bookNumbers: parsedNumbers,
       availableBookNumbers: parsedNumbers,
-      branch: parsedBranches,
+      branch: parsedBranches, // ✅ stored into schema's `branch` field
       location: parsedLocation,
       image,
     });
 
     await newBook.save();
     return res.json({ success: true, message: "New book added successfully!" });
+
   } catch (err) {
     console.error("Error in addBooks:", err);
     return res.status(500).json({ success: false, message: "Server error while adding book." });
@@ -139,4 +143,27 @@ const checkISBN = async (req, res) => {
   }
 };
 
-export { addBooks, listBooks, deleteBooks, checkISBN };
+const getBookByNumber = async (req, res) => {
+  const { bookNumber } = req.params;
+
+  try {
+    const book = await BookModel.findOne({
+      $or: [
+        { availableBookNumbers: bookNumber },
+        { issuedBookNumbers: bookNumber }
+      ]
+    });
+
+    if (!book) {
+      return res.status(404).json({ success: false, message: "Book not found." });
+    }
+
+    return res.status(200).json({ success: true, book });
+
+  } catch (err) {
+    console.error("Get Book Error:", err);
+    return res.status(500).json({ success: false, message: "Server error while fetching book." });
+  }
+};
+
+export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber };

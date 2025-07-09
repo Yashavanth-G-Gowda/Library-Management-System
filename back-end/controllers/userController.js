@@ -129,6 +129,21 @@ const getAllUsers = async (req, res) => {
   }
 };
 
+const getUserBySRN = async (req, res) => {
+  const { srn } = req.params;
+
+  try {
+    const user = await UserModel.findOne({ srn });
+    if (!user) {
+      return res.status(404).json({ success: false, message: "User not found." });
+    }
+    return res.status(200).json({ success: true, user });
+  } catch (err) {
+    console.error("Get User Error:", err);
+    return res.status(500).json({ success: false, message: "Server error while fetching user." });
+  }
+};
+
 const adminLogin = async(req,res) => {
     try {
         const {userId,password} = req.body
@@ -145,4 +160,4 @@ const adminLogin = async(req,res) => {
     }
 }
 
-export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers} 
+export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers, getUserBySRN} 
