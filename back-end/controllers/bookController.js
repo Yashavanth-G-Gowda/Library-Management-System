@@ -2,7 +2,7 @@ import BookModel from "../models/bookModel.js";
 import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs";
 import UserModel from "../models/userModel.js";
-import nodemailer from 'nodemailer';
+import sendEmail from "../config/sendEmail.js";
 
 const addBooks = async (req, res) => {
   try {
@@ -15,14 +15,13 @@ const addBooks = async (req, res) => {
       return res.status(400).json({ success: false, message: "Missing required fields." });
     }
 
-    // ✅ Parse incoming fields
     const parsedTags = JSON.parse(tags || '[]');
     const parsedNumbers = JSON.parse(bookNumbers || '[]');
-    const parsedBranches = JSON.parse(branches || '[]'); // ✅ fixed here
+    const parsedBranches = JSON.parse(branches || '[]');
     const parsedLocation = JSON.parse(location || '{}');
     const isConfirmed = JSON.parse(confirmed || 'false');
 
-    // ✅ Check for existing book
+    // 🔍 Check for duplicate ISBN
     const existingBook = await BookModel.findOne({ isbn });
 
     if (existingBook && !isConfirmed) {
@@ -38,20 +37,22 @@ const addBooks = async (req, res) => {
       return res.json({ success: true, message: "Book numbers appended to existing book." });
     }
 
-    // ----------------------------
-    // 📤 Upload image to Cloudinary
-    // ----------------------------
+    // ☁️ Upload image to Cloudinary (optional fallback)
     let image = '';
-    if (req?.files?.image?.[0]?.path) {
-      const result = await cloudinary.uploader.upload(req.files.image[0].path, {
-        folder: 'library_books',
-      });
-      image = result.secure_url;
-    } else if (req.body.imageURL) {
-      image = req.body.imageURL; // fallback if image URL is provided instead
+    try {
+      if (req?.files?.image?.[0]?.path) {
+        const result = await cloudinary.uploader.upload(req.files.image[0].path, {
+          folder: 'library_books',
+        });
+        image = result.secure_url;
+      } else if (req.body.imageURL) {
+        image = req.body.imageURL;
+      }
+    } catch (uploadErr) {
+      console.error("❌ Image upload failed:", uploadErr.message);
     }
 
-    // ✅ Create new book
+    // 🧾 Create and save new book
     const newBook = new BookModel({
       title,
       edition,
@@ -62,69 +63,59 @@ const addBooks = async (req, res) => {
       tags: parsedTags,
       bookNumbers: parsedNumbers,
       availableBookNumbers: parsedNumbers,
-      branch: parsedBranches, // ✅ stored into schema's `branch` field
+      branch: parsedBranches,
       location: parsedLocation,
       image,
     });
 
     await newBook.save();
 
-    // Send email notification to relevant users
+    // 📧 Email notification to users
     try {
-      let users = [];
-      if (parsedBranches && parsedBranches.length > 0) {
-        users = await UserModel.find({ branch: { $in: parsedBranches } }, 'email');
-      } else {
-        users = await UserModel.find({}, 'email'); // fallback: all users
-      }
-      // Set up nodemailer transporter (reuse OTP config)
-      const transporter = nodemailer.createTransport({
-        service: 'gmail',
-        auth: {
-          user: process.env.EMAIL_USER,
-          pass: process.env.EMAIL_PASS,
-        }
-      });
-      // Email content
-      const subject = 'New Book Added to SJCE Library!';
-      const html = `<div style="font-family:sans-serif;">
-        <h2>New Book Available in the Library!</h2>
-        <p>Dear Student/Faculty,</p>
-        <p>We are excited to announce that a new book has been added to the SJCE Library collection:</p>
-        <ul>
-          <li><b>Title:</b> ${title}</li>
-          <li><b>Author:</b> ${author}</li>
-          <li><b>Edition:</b> ${edition}</li>
-          <li><b>ISBN:</b> ${isbn}</li>
-          <li><b>Publisher:</b> ${publisher || 'N/A'}</li>
-          <li><b>Year:</b> ${year || 'N/A'}</li>
-          <li><b>Branches:</b> ${(parsedBranches && parsedBranches.length > 0) ? parsedBranches.join(', ') : 'All'}</li>
-        </ul>
-        <p>Visit the library or our online portal to borrow or learn more about this book.</p>
-        <p>Happy Reading!<br/>SJCE Library Team</p>
-        <hr/>
-        <small>This is an automated message. Please do not reply.</small>
-      </div>`;
-      // Send individual emails
-      for (const user of users) {
+      const usersToNotify = await UserModel.find(
+        { branch: { $in: parsedBranches } },
+        'email name'
+      );
+
+      const subject = '📚 New Book Added to SJCE Library';
+      const html = `
+        <div style="font-family:sans-serif;">
+          <h2>New Book Available in the Library!</h2>
+          <p>Dear Student/Faculty,</p>
+          <p>We are excited to announce a new addition to the SJCE Library collection:</p>
+          <ul>
+            <li><b>Title:</b> ${title}</li>
+            <li><b>Author:</b> ${author}</li>
+            <li><b>Edition:</b> ${edition}</li>
+            <li><b>ISBN:</b> ${isbn}</li>
+            <li><b>Publisher:</b> ${publisher || 'N/A'}</li>
+            <li><b>Year:</b> ${year || 'N/A'}</li>
+            <li><b>Branches:</b> ${parsedBranches.join(', ')}</li>
+          </ul>
+          <p>Visit the library or our portal to borrow this book.</p>
+          <p>📖 Happy Reading!<br/>SJCE Library Team</p>
+          <hr/>
+          <small>This is an automated message. Please do not reply.</small>
+        </div>`;
+
+      for (const user of usersToNotify) {
         if (user.email) {
-          await transporter.sendMail({
-            from: `SJCE Library <${process.env.EMAIL_USER}>`,
+          await sendEmail({
             to: user.email,
             subject,
             html,
+            text: `New Book: ${title} by ${author}, Edition: ${edition} has been added to SJCE Library.`
           });
         }
       }
     } catch (emailErr) {
-      console.error('Error sending notification emails:', emailErr);
-      // Optionally, do not fail the main request if email fails
+      console.error('❌ Email Notification Error:', emailErr.message);
     }
 
     return res.json({ success: true, message: "New book added successfully!" });
 
   } catch (err) {
-    console.error("Error in addBooks:", err);
+    console.error("❌ Fatal Error in addBooks:", err);
     return res.status(500).json({ success: false, message: "Server error while adding book." });
   }
 };
