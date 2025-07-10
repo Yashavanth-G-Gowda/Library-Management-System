@@ -82,16 +82,33 @@ const addBooks = async (req, res) => {
         }
       });
       // Email content
-      const subject = 'New Book Added to Library!';
-      const text = `A new book "${title}" by ${author} has been added to the library!`;
+      const subject = 'New Book Added to SJCE Library!';
+      const html = `<div style="font-family:sans-serif;">
+        <h2>New Book Available in the Library!</h2>
+        <p>Dear Student/Faculty,</p>
+        <p>We are excited to announce that a new book has been added to the SJCE Library collection:</p>
+        <ul>
+          <li><b>Title:</b> ${title}</li>
+          <li><b>Author:</b> ${author}</li>
+          <li><b>Edition:</b> ${edition}</li>
+          <li><b>ISBN:</b> ${isbn}</li>
+          <li><b>Publisher:</b> ${publisher || 'N/A'}</li>
+          <li><b>Year:</b> ${year || 'N/A'}</li>
+          <li><b>Branches:</b> ${(parsedBranches && parsedBranches.length > 0) ? parsedBranches.join(', ') : 'All'}</li>
+        </ul>
+        <p>Visit the library or our online portal to borrow or learn more about this book.</p>
+        <p>Happy Reading!<br/>SJCE Library Team</p>
+        <hr/>
+        <small>This is an automated message. Please do not reply.</small>
+      </div>`;
       // Send individual emails
       for (const user of users) {
         if (user.email) {
           await transporter.sendMail({
-            from: `"Library Notification" <${process.env.EMAIL_USER}>`,
+            from: `SJCE Library <${process.env.EMAIL_USER}>`,
             to: user.email,
             subject,
-            text,
+            html,
           });
         }
       }

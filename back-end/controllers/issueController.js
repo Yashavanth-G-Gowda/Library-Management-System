@@ -1,6 +1,7 @@
 import IssuedBookModel from '../models/issueBookModel.js';
 import BookModel from '../models/bookModel.js';
 import UserModel from '../models/userModel.js';
+import nodemailer from 'nodemailer';
 
 const issueBook = async (req, res) => {
   const { srn, issuedBookNumber, isbn } = req.body;
@@ -61,6 +62,45 @@ const issueBook = async (req, res) => {
       returnDate: newIssued.returnDate,
     });
     await user.save();
+
+    // 8️⃣ Send email notification to user
+    try {
+      if (user.email) {
+        const transporter = nodemailer.createTransport({
+          service: 'gmail',
+          auth: {
+            user: process.env.EMAIL_USER,
+            pass: process.env.EMAIL_PASS,
+          },
+        });
+        const mailOptions = {
+          from: `SJCE Library <${process.env.EMAIL_USER}>`,
+          to: user.email,
+          subject: 'Book Issued: SJCE Library',
+          html: `<div style="font-family:sans-serif;">
+            <h2>Book Issued Successfully!</h2>
+            <p>Dear <b>${user.name || user.srn}</b>,</p>
+            <p>Your book has been issued from the SJCE Library. Here are the details:</p>
+            <ul>
+              <li><b>Title:</b> ${book.title}</li>
+              <li><b>Author:</b> ${book.author}</li>
+              <li><b>Book Number:</b> ${issuedBookNumber}</li>
+              <li><b>ISBN:</b> ${isbn}</li>
+              <li><b>Issued Date:</b> ${newIssued.issuedDate}</li>
+              <li><b>Due Date:</b> ${newIssued.returnDate}</li>
+            </ul>
+            <p>Please return the book on or before the due date to avoid fines.</p>
+            <p>Thank you for using the SJCE Library!</p>
+            <hr/>
+            <small>This is an automated message. Please do not reply.</small>
+          </div>`,
+        };
+        await transporter.sendMail(mailOptions);
+      }
+    } catch (emailErr) {
+      console.error('Error sending issue notification email:', emailErr);
+      // Do not fail the main request if email fails
+    }
 
     return res.status(201).json({
       success: true,
