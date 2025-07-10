@@ -12,28 +12,17 @@ function getFormattedDate(offsetDays = 0) {
 }
 
 const IssueBookSchema = new mongoose.Schema({
-  srn: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  issuedBookNumber: {
-    type: String,
-    required: true,
-    unique: true
-  },
-  isbn: {
-    type: String,
-    required: true
-  },
+  srn: { type: String, required: true },
+  issuedBookNumber: { type: String, required: true, unique: true },
+  isbn: { type: String, required: true },
   issuedDate: {
     type: String,
-    default: () => getFormattedDate() // today
+    default: () => getFormattedDate(),
   },
   returnDate: {
     type: String,
-    default: () => getFormattedDate(15) // today + 15 days
-  }
+    default: () => getFormattedDate(15),
+  },
 }, {
   timestamps: true
 });

@@ -45,11 +45,14 @@ const BorrowedBooks = ({ token }) => {
       const srnMatch = book.srn.toLowerCase().includes(value.toLowerCase());
       const isbnMatch = book.isbn.toLowerCase().includes(value.toLowerCase());
       const bookNumberMatch = book.bookNumber.toLowerCase().includes(value.toLowerCase());
-      return srnMatch || isbnMatch || bookNumberMatch;
+      const titleMatch = book.title?.toLowerCase().includes(value.toLowerCase()); // ✅ added
+
+      return srnMatch || isbnMatch || bookNumberMatch || titleMatch;
     });
 
     setFilteredBooks(filtered);
   };
+
 
   const confirmReturn = async () => {
     if (!selectedBook) return;
