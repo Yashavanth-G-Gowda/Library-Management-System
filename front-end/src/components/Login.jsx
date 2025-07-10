@@ -11,12 +11,16 @@ const Login = () => {
   const [password, setPassword] = useState('');
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
+  const [userstate, setUserState] = useState('student'); // 'student' | 'faculty'
 
   const handleLogin = async (e) => {
     e.preventDefault();
-
     try {
-      const res = await axios.post(`${backendURL}/api/user/login`, { srn, password });
+      const res = await axios.post(`${backendURL}/api/user/login`, {
+        srn,
+        password,
+        usertype: userstate,
+      });
 
       if (res.data.success) {
         setToken(res.data.token);
@@ -68,6 +72,7 @@ const Login = () => {
           srn,
           email,
           password,
+          usertype: userstate,
         });
 
         if (registerRes.data.success) {
@@ -105,6 +110,24 @@ const Login = () => {
           <div className="w-8 h-[2px] bg-gray-800 mx-auto mt-1" />
         </div>
 
+        {/* Role Toggle */}
+        <div className="flex justify-center items-center gap-6 mb-4">
+          <div
+            className={`flex items-center gap-2 cursor-pointer select-none ${userstate === 'student' ? 'text-black font-semibold' : 'text-gray-500'}`}
+            onClick={() => setUserState('student')}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 ${userstate === 'student' ? 'bg-black border-black' : 'border-gray-400'}`} />
+            <span className="text-sm">Student</span>
+          </div>
+          <div
+            className={`flex items-center gap-2 cursor-pointer select-none ${userstate === 'faculty' ? 'text-black font-semibold' : 'text-gray-500'}`}
+            onClick={() => setUserState('faculty')}
+          >
+            <div className={`w-4 h-4 rounded-full border-2 ${userstate === 'faculty' ? 'bg-black border-black' : 'border-gray-400'}`} />
+            <span className="text-sm">Faculty</span>
+          </div>
+        </div>
+
         {/* LOGIN FORM */}
         {step === 'login' && (
           <form onSubmit={handleLogin} className="flex flex-col items-center gap-4 text-gray-800">
@@ -112,7 +135,7 @@ const Login = () => {
               value={srn}
               onChange={(e) => setSRN(e.target.value.toUpperCase())}
               type="text"
-              placeholder="SR Number"
+              placeholder={userstate === 'faculty' ? 'FR Number' : 'SR Number'}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
               required
             />
@@ -151,7 +174,7 @@ const Login = () => {
               value={srn}
               onChange={(e) => setSRN(e.target.value.toUpperCase())}
               type="text"
-              placeholder="SR Number"
+              placeholder={userstate === 'faculty' ? 'FR Number' : 'SR Number'}
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
               required
             />
