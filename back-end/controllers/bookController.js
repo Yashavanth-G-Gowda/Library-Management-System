@@ -69,10 +69,14 @@ const addBooks = async (req, res) => {
 
     await newBook.save();
 
-    // Send email notification to all users
+    // Send email notification to relevant users
     try {
-      // Fetch all user emails
-      const users = await UserModel.find({}, 'email');
+      let users = [];
+      if (parsedBranches && parsedBranches.length > 0) {
+        users = await UserModel.find({ branch: { $in: parsedBranches } }, 'email');
+      } else {
+        users = await UserModel.find({}, 'email'); // fallback: all users
+      }
       // Set up nodemailer transporter (reuse OTP config)
       const transporter = nodemailer.createTransport({
         service: 'gmail',

@@ -4,6 +4,8 @@ import { UserContext } from '../context/UserContext'
 import axios from 'axios'
 import { toast } from 'react-toastify'
 import Feedback from '../components/Feedback'
+import { useNavigate } from 'react-router-dom';
+import ShowBookDetails from '../components/bookComponents/ShowBookDetails';
 
 const Home = () => {
   const { token, userInfo, backendURL, navigate } = useContext(UserContext)
@@ -11,6 +13,7 @@ const Home = () => {
   const [recommendedBooks, setRecommendedBooks] = useState([])
   const [borrowedBooks, setBorrowedBooks] = useState([])
   const [loading, setLoading] = useState(true)
+  const [selectedBook, setSelectedBook] = useState(null)
 
   // Fetch newly arrived books
   const fetchNewlyArrivedBooks = async () => {
@@ -97,50 +100,76 @@ const Home = () => {
   }
 
   const formatDate = (dateStr) => {
-    if (!dateStr) return ''
-    const [mm, dd, yyyy] = dateStr.split('-')
-    return `${dd}-${mm}-${yyyy}`
+    if (!dateStr) return '';
+    // Accepts mm-dd-yyyy, yyyy-mm-dd, dd-mm-yyyy, etc.
+    let d, m, y;
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts[0].length === 4) {
+        // yyyy-mm-dd
+        [y, m, d] = parts;
+      } else if (parts[2].length === 4) {
+        // mm-dd-yyyy or dd-mm-yyyy
+        [m, d, y] = parts;
+        if (Number(m) > 12) [d, m] = [m, d]; // swap if dd-mm-yyyy
+      } else {
+        [d, m, y] = parts;
+      }
+      return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+    }
+    return dateStr;
   }
 
   const calculateTotalFine = () => {
     return borrowedBooks.reduce((total, book) => total + (book.fine || 0), 0)
   }
 
-  const BookCard = ({ book, type = "default" }) => (
-    <div className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300">
-      <div className="relative">
-        <img 
-          src={book.image} 
-          alt={book.title}
-          className="w-full h-48 object-cover"
-        />
-        {type === "new" && (
-          <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
-            NEW
+  const BookCard = ({ book, type = "default" }) => {
+    const handleClick = () => {
+      setSelectedBook(book);
+    };
+    return (
+      <div
+        className="bg-white rounded-lg shadow-md overflow-hidden hover:shadow-lg transition-shadow duration-300 cursor-pointer"
+        onClick={handleClick}
+        tabIndex={0}
+        role="button"
+        aria-label={`View details for ${book.title}`}
+      >
+        <div className="relative">
+          <img 
+            src={book.image} 
+            alt={book.title}
+            className="w-full h-48 object-cover"
+          />
+          {type === "new" && (
+            <div className="absolute top-2 left-2 bg-green-500 text-white text-xs px-2 py-1 rounded-full">
+              NEW
+            </div>
+          )}
+          {type === "recommended" && (
+            <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
+              RECOMMENDED
+            </div>
+          )}
+        </div>
+        <div className="p-4">
+          <h3 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-2">
+            {book.title}
+          </h3>
+          <p className="text-gray-600 text-xs mb-2">by {book.author}</p>
+          <div className="flex justify-between items-center">
+            <span className="text-xs text-gray-500">
+              {book.availableBookNumbers?.length || 0} available
+            </span>
+            <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
+              {book.branch?.[0] || 'General'}
+            </span>
           </div>
-        )}
-        {type === "recommended" && (
-          <div className="absolute top-2 left-2 bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-            RECOMMENDED
-          </div>
-        )}
-      </div>
-      <div className="p-4">
-        <h3 className="font-semibold text-gray-800 text-sm mb-1 line-clamp-2">
-          {book.title}
-        </h3>
-        <p className="text-gray-600 text-xs mb-2">by {book.author}</p>
-        <div className="flex justify-between items-center">
-          <span className="text-xs text-gray-500">
-            {book.availableBookNumbers?.length || 0} available
-          </span>
-          <span className="text-xs bg-gray-100 text-gray-700 px-2 py-1 rounded">
-            {book.branch?.[0] || 'General'}
-          </span>
         </div>
       </div>
-    </div>
-  )
+    )
+  }
 
   const BorrowedBookCard = ({ book }) => (
     <div className="bg-white rounded-lg shadow-sm border p-3">
@@ -225,6 +254,10 @@ const Home = () => {
               <FaBook className="text-4xl mx-auto mb-4 text-gray-300" />
               <p>No newly arrived books at the moment</p>
             </div>
+          )}
+          {/* Book Details Modal */}
+          {selectedBook && (
+            <ShowBookDetails book={selectedBook} onClose={() => setSelectedBook(null)} />
           )}
         </section>
 

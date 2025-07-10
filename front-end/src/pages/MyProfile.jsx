@@ -94,8 +94,23 @@ const MyProfile = () => {
   // Format mm-dd-yyyy to dd-mm-yyyy
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    const [mm, dd, yyyy] = dateStr.split('-');
-    return `${dd}-${mm}-${yyyy}`;
+    // Accepts mm-dd-yyyy, yyyy-mm-dd, dd-mm-yyyy, etc.
+    let d, m, y;
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts[0].length === 4) {
+        // yyyy-mm-dd
+        [y, m, d] = parts;
+      } else if (parts[2].length === 4) {
+        // mm-dd-yyyy or dd-mm-yyyy
+        [m, d, y] = parts;
+        if (Number(m) > 12) [d, m] = [m, d]; // swap if dd-mm-yyyy
+      } else {
+        [d, m, y] = parts;
+      }
+      return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+    }
+    return dateStr;
   };
 
   const calculateTotalFine = () => {

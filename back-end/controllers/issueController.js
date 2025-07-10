@@ -73,6 +73,23 @@ const issueBook = async (req, res) => {
             pass: process.env.EMAIL_PASS,
           },
         });
+        const formatDate = (dateStr) => {
+          if (!dateStr) return '';
+          let d, m, y;
+          if (dateStr.includes('-')) {
+            const parts = dateStr.split('-');
+            if (parts[0].length === 4) {
+              [y, m, d] = parts;
+            } else if (parts[2].length === 4) {
+              [m, d, y] = parts;
+              if (Number(m) > 12) [d, m] = [m, d];
+            } else {
+              [d, m, y] = parts;
+            }
+            return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+          }
+          return dateStr;
+        };
         const mailOptions = {
           from: `SJCE Library <${process.env.EMAIL_USER}>`,
           to: user.email,
@@ -86,8 +103,8 @@ const issueBook = async (req, res) => {
               <li><b>Author:</b> ${book.author}</li>
               <li><b>Book Number:</b> ${issuedBookNumber}</li>
               <li><b>ISBN:</b> ${isbn}</li>
-              <li><b>Issued Date:</b> ${newIssued.issuedDate}</li>
-              <li><b>Due Date:</b> ${newIssued.returnDate}</li>
+              <li><b>Issued Date:</b> ${formatDate(newIssued.issuedDate)}</li>
+              <li><b>Due Date:</b> ${formatDate(newIssued.returnDate)}</li>
             </ul>
             <p>Please return the book on or before the due date to avoid fines.</p>
             <p>Thank you for using the SJCE Library!</p>

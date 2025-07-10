@@ -2,7 +2,7 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   name: { type: String },
-  srn: { type: String, required: true },
+  srn: { type: String },
   sem: { type: String },
   branch: { type: String },
   phone: { type: String },

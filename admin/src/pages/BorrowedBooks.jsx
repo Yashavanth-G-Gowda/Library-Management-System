@@ -80,6 +80,25 @@ const BorrowedBooks = ({ token }) => {
     setShowModal(true);
   };
 
+  // Helper to format date as dd-mm-yyyy
+  const formatDate = (dateStr) => {
+    if (!dateStr) return '';
+    let d, m, y;
+    if (dateStr.includes('-')) {
+      const parts = dateStr.split('-');
+      if (parts[0].length === 4) {
+        [y, m, d] = parts;
+      } else if (parts[2].length === 4) {
+        [m, d, y] = parts;
+        if (Number(m) > 12) [d, m] = [m, d];
+      } else {
+        [d, m, y] = parts;
+      }
+      return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
+    }
+    return dateStr;
+  }
+
   return (
     <div className="p-6">
       {/* 🔍 Search Bar */}
@@ -136,8 +155,8 @@ const BorrowedBooks = ({ token }) => {
                   <td className="p-3 border">{book.isbn}</td>
                   <td className="p-3 border">{book.title}</td>
                   <td className="p-3 border">{book.bookNumber}</td>
-                  <td className="p-3 border">{book.issuedDate}</td>
-                  <td className="p-3 border">{book.returnDate}</td>
+                  <td className="p-3 border">{formatDate(book.issuedDate)}</td>
+                  <td className="p-3 border">{formatDate(book.returnDate)}</td>
                   <td className="p-3 border text-center">
                     <button
                       onClick={() => handleReturnClick(book)}
