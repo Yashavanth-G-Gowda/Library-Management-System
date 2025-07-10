@@ -7,21 +7,32 @@ import sendEmail from "../config/sendEmail.js";
 const addBooks = async (req, res) => {
   try {
     const {
-      title, edition, author, isbn, publisher, year,
-      tags, bookNumbers, branches, location, confirmed
+      title,
+      edition,
+      author,
+      isbn,
+      publisher,
+      year,
+      tags,
+      bookNumbers,
+      branches,
+      location,
+      confirmed
     } = req.body;
 
+    // 🔐 Validate
     if (!title || !isbn || !bookNumbers) {
       return res.status(400).json({ success: false, message: "Missing required fields." });
     }
 
+    // 🧠 Parse incoming data
     const parsedTags = JSON.parse(tags || '[]');
     const parsedNumbers = JSON.parse(bookNumbers || '[]');
     const parsedBranches = JSON.parse(branches || '[]');
     const parsedLocation = JSON.parse(location || '{}');
     const isConfirmed = JSON.parse(confirmed || 'false');
 
-    // 🔍 Check for duplicate ISBN
+    // 🔍 Check for existing book by ISBN
     const existingBook = await BookModel.findOne({ isbn });
 
     if (existingBook && !isConfirmed) {
@@ -31,13 +42,15 @@ const addBooks = async (req, res) => {
     if (existingBook && isConfirmed) {
       const existingSet = new Set(existingBook.bookNumbers);
       const newBookNumbers = parsedNumbers.filter(bn => !existingSet.has(bn));
+
       existingBook.bookNumbers.push(...newBookNumbers);
       existingBook.availableBookNumbers.push(...newBookNumbers);
       await existingBook.save();
+
       return res.json({ success: true, message: "Book numbers appended to existing book." });
     }
 
-    // ☁️ Upload image to Cloudinary (optional fallback)
+    // ☁️ Upload image (Cloudinary)
     let image = '';
     try {
       if (req?.files?.image?.[0]?.path) {
@@ -52,7 +65,7 @@ const addBooks = async (req, res) => {
       console.error("❌ Image upload failed:", uploadErr.message);
     }
 
-    // 🧾 Create and save new book
+    // 📘 Create new book
     const newBook = new BookModel({
       title,
       edition,
@@ -70,19 +83,31 @@ const addBooks = async (req, res) => {
 
     await newBook.save();
 
-    // 📧 Email notification to users
+    // 🔔 Email notification
     try {
-      const usersToNotify = await UserModel.find(
+      console.log("📦 Book added. Now preparing email notification...");
+
+      console.log("📌 Parsed Branches:", parsedBranches);
+
+      let usersToNotify = await UserModel.find(
         { branch: { $in: parsedBranches } },
         'email name'
       );
 
+      console.log("👥 Users to notify (matched branches):", usersToNotify.length);
+
+      // 🧪 If no users matched, fallback to all users for testing
+      if (usersToNotify.length === 0) {
+        console.warn("⚠️ No users found for these branches. Falling back to all users temporarily.");
+        usersToNotify = await UserModel.find({}, 'email name');
+      }
+
       const subject = '📚 New Book Added to SJCE Library';
-      const html = `
+
+      const htmlTemplate = (userName) => `
         <div style="font-family:sans-serif;">
-          <h2>New Book Available in the Library!</h2>
-          <p>Dear Student/Faculty,</p>
-          <p>We are excited to announce a new addition to the SJCE Library collection:</p>
+          <h2>Hello ${userName || 'Student'},</h2>
+          <p>We’re excited to inform you that a new book has just been added to the SJCE Library:</p>
           <ul>
             <li><b>Title:</b> ${title}</li>
             <li><b>Author:</b> ${author}</li>
@@ -90,26 +115,27 @@ const addBooks = async (req, res) => {
             <li><b>ISBN:</b> ${isbn}</li>
             <li><b>Publisher:</b> ${publisher || 'N/A'}</li>
             <li><b>Year:</b> ${year || 'N/A'}</li>
-            <li><b>Branches:</b> ${parsedBranches.join(', ')}</li>
           </ul>
-          <p>Visit the library or our portal to borrow this book.</p>
-          <p>📖 Happy Reading!<br/>SJCE Library Team</p>
+          <p>📚 You’re welcome to check it out in the library at your earliest convenience.</p>
+          <p>Happy Reading!<br/>SJCE Library Team</p>
           <hr/>
           <small>This is an automated message. Please do not reply.</small>
         </div>`;
 
       for (const user of usersToNotify) {
         if (user.email) {
+          console.log("📨 Sending email to:", user.email);
+
           await sendEmail({
             to: user.email,
             subject,
-            html,
-            text: `New Book: ${title} by ${author}, Edition: ${edition} has been added to SJCE Library.`
+            html: htmlTemplate(user.name),
+            text: `Hi ${user.name || "Student"},\n\nA new book titled "${title}" by ${author} (Edition: ${edition}) has been added to SJCE Library.\n\nVisit the library soon to borrow it!\n\n- SJCE Library Team`
           });
         }
       }
     } catch (emailErr) {
-      console.error('❌ Email Notification Error:', emailErr.message);
+      console.error("❌ Email Notification Error:", emailErr.message);
     }
 
     return res.json({ success: true, message: "New book added successfully!" });
