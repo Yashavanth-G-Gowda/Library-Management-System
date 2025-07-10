@@ -1,9 +1,11 @@
 // Footer.jsx
-import React from 'react';
+import React, { useContext } from 'react';
 import { ArrowUp } from 'lucide-react';
 import { assets } from '../assets/assets';
+import { UserContext } from '../context/UserContext';
 
 const Footer = () => {
+  const { setIsFeedbackVisible } = useContext(UserContext);
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
   return (
@@ -24,8 +26,14 @@ const Footer = () => {
         </div>
       </div>
 
-      {/* Scroll to Top */}
-      <div className="mt-4 sm:mt-0 flex justify-center sm:justify-end">
+      {/* Action Buttons */}
+      <div className="mt-4 sm:mt-0 flex justify-center sm:justify-end gap-4">
+        <button
+          onClick={() => setIsFeedbackVisible(true)}
+          className="bg-white text-[#f26522] px-4 py-2 rounded-lg font-medium hover:bg-gray-100 transition-colors text-sm"
+        >
+          Give Feedback
+        </button>
         <button
           onClick={scrollToTop}
           className="text-white hover:text-gray-200 sm:hidden"

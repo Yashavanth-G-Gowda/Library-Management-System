@@ -69,34 +69,35 @@ const addBooks = async (req, res) => {
 
     await newBook.save();
 
-    // --- EMAIL ALL USERS ---
+    // Send email notification to all users
     try {
+      // Fetch all user emails
       const users = await UserModel.find({}, 'email');
-      const emailList = users.map(user => user.email).filter(Boolean);
-      if (emailList.length > 0) {
-        const transporter = nodemailer.createTransport({
-          service: 'gmail',
-          auth: {
-            user: process.env.GMAIL_USER,
-            pass: process.env.GMAIL_PASS
-          }
-        });
-        const mailOptions = {
-          from: process.env.GMAIL_USER,
-          to: emailList, // can be array or comma-separated string
-          subject: 'New Book Added to Library',
-          text: `A new book titled "${title}" by ${author} has been added to the library! Check it out!`
-        };
-        transporter.sendMail(mailOptions, (error, info) => {
-          if (error) {
-            console.error('Error sending emails:', error);
-          } else {
-            console.log('Emails sent:', info.response);
-          }
-        });
+      // Set up nodemailer transporter (reuse OTP config)
+      const transporter = nodemailer.createTransport({
+        service: 'gmail',
+        auth: {
+          user: process.env.EMAIL_USER,
+          pass: process.env.EMAIL_PASS,
+        }
+      });
+      // Email content
+      const subject = 'New Book Added to Library!';
+      const text = `A new book "${title}" by ${author} has been added to the library!`;
+      // Send individual emails
+      for (const user of users) {
+        if (user.email) {
+          await transporter.sendMail({
+            from: `"Library Notification" <${process.env.EMAIL_USER}>`,
+            to: user.email,
+            subject,
+            text,
+          });
+        }
       }
     } catch (emailErr) {
-      console.error('Error in sending notification emails:', emailErr);
+      console.error('Error sending notification emails:', emailErr);
+      // Optionally, do not fail the main request if email fails
     }
 
     return res.json({ success: true, message: "New book added successfully!" });
@@ -217,56 +218,135 @@ const getBookByISBN = async (req, res) => {
   }
 };
 
-const editBook = async (req, res) => {
-  const { isbn } = req.params;
-  const updates = req.body;
-
-  if (!isbn) {
-    return res.status(400).json({ success: false, message: "ISBN is required" });
-  }
-
+// Route to get newly arrived books (last 30 days)
+const getNewlyArrivedBooks = async (req, res) => {
   try {
-    const book = await BookModel.findOne({ isbn });
-
-    if (!book) {
-      return res.status(404).json({ success: false, message: "Book not found" });
-    }
-
-    // ✅ Handle image upload (if any)
-    if (req.file) {
-      const imagePath = `/uploads/${req.file.filename}`;
-      updates.image = imagePath;
-    }
-
-    // ✅ Update only allowed fields
-    const updatableFields = [
-      'title',
-      'author',
-      'edition',
-      'publisher',
-      'year',
-      'shelf',
-      'row',
-      'image',
-    ];
-
-    updatableFields.forEach(field => {
-      if (updates[field] !== undefined && updates[field] !== '') {
-        book[field] = updates[field];
-      }
-    });
-
-    await book.save();
-
-    res.status(200).json({
-      success: true,
-      message: 'Book updated successfully',
-      book,
-    });
-  } catch (err) {
-    console.error('❌ EditBook Error:', err);
-    res.status(500).json({ success: false, message: 'Server error while updating book' });
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const newlyArrivedBooks = await BookModel.find({
+      createdAt: { $gte: thirtyDaysAgo }
+    }).sort({ createdAt: -1 }).limit(10);
+    
+    res.json({ success: true, books: newlyArrivedBooks });
+  } catch (error) {
+    console.error("Error fetching newly arrived books:", error.message);
+    res.json({ success: false, message: "Internal Server Error" });
   }
 };
 
-export { addBooks, listBooks, deleteBooks, checkISBN, getBookByNumber, getBookByISBN, editBook };
+// Route to get book recommendations based on user history
+const getBookRecommendations = async (req, res) => {
+  try {
+    const token = req.headers.token;
+    if (!token) {
+      return res.json({ success: false, message: 'No token provided' });
+    }
+
+    const jwt = await import('jsonwebtoken');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await UserModel.findById(decoded.id).select('-password');
+
+    if (!user) {
+      return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Get user's borrowed books history
+    const userBorrowedBooks = [];
+    if (user.booksBorrowed && user.booksBorrowed.size > 0) {
+      for (const [bookNumber, bookData] of user.booksBorrowed.entries()) {
+        const book = await BookModel.findOne({ isbn: bookData.isbn });
+        if (book) {
+          userBorrowedBooks.push(book);
+        }
+      }
+    }
+
+    // Extract tags and authors from user's history
+    const userTags = new Set();
+    const userAuthors = new Set();
+    const userBranches = new Set();
+
+    userBorrowedBooks.forEach(book => {
+      if (book.tags) {
+        book.tags.forEach(tag => userTags.add(tag));
+      }
+      if (book.author) {
+        userAuthors.add(book.author);
+      }
+      if (book.branch) {
+        book.branch.forEach(branch => userBranches.add(branch));
+      }
+    });
+
+    // Find books with similar tags, authors, or branches
+    const recommendations = await BookModel.find({
+      $and: [
+        { _id: { $nin: userBorrowedBooks.map(book => book._id) } }, // Exclude already borrowed
+        {
+          $or: [
+            { tags: { $in: Array.from(userTags) } },
+            { author: { $in: Array.from(userAuthors) } },
+            { branch: { $in: Array.from(userBranches) } }
+          ]
+        }
+      ]
+    }).limit(10);
+
+    // If not enough recommendations, add some popular books
+    if (recommendations.length < 5) {
+      const popularBooks = await BookModel.find({
+        _id: { $nin: [...userBorrowedBooks.map(book => book._id), ...recommendations.map(book => book._id)] }
+      }).limit(10 - recommendations.length);
+      
+      recommendations.push(...popularBooks);
+    }
+
+    res.json({ success: true, books: recommendations });
+  } catch (error) {
+    console.error("Error fetching book recommendations:", error.message);
+    res.json({ success: false, message: "Internal Server Error" });
+  }
+};
+
+const editBook = async (req, res) => {
+  try {
+    const { isbn } = req.params;
+    const updateData = req.body;
+
+    // Remove undefined fields
+    Object.keys(updateData).forEach(key => {
+      if (updateData[key] === undefined) {
+        delete updateData[key];
+      }
+    });
+
+    // Handle image upload if provided
+    if (req.file) {
+      const result = await cloudinary.uploader.upload(req.file.path, {
+        folder: 'library_books',
+      });
+      updateData.image = result.secure_url;
+      
+      // Clean up uploaded file
+      fs.unlinkSync(req.file.path);
+    }
+
+    const updatedBook = await BookModel.findOneAndUpdate(
+      { isbn },
+      updateData,
+      { new: true }
+    );
+
+    if (!updatedBook) {
+      return res.status(404).json({ success: false, message: "Book not found" });
+    }
+
+    res.json({ success: true, message: "Book updated successfully", book: updatedBook });
+  } catch (error) {
+    console.error("Error updating book:", error.message);
+    res.status(500).json({ success: false, message: "Error updating book" });
+  }
+};
+
+export { addBooks, deleteBooks, listBooks, checkISBN, getBookByNumber, getBookByISBN, editBook, getNewlyArrivedBooks, getBookRecommendations };

@@ -23,9 +23,11 @@ const Feedback = () => {
     setIsFeedbackVisible(false); // close
   };
 
+  if (!isFeedbackVisible) return null;
+
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-30 flex justify-center items-center z-50">
-      <div className="relative w-[90%] max-w-md bg-white p-5 rounded-2xl shadow-2xl">
+    <div className="fixed inset-0 z-50 flex justify-center items-end pointer-events-none">
+      <div className="relative w-[95%] max-w-md bg-white p-5 rounded-t-2xl shadow-2xl mb-4 pointer-events-auto animate-slideUp">
         {/* X Close */}
         <button
           onClick={() => setIsFeedbackVisible(false)}
@@ -50,6 +52,15 @@ const Feedback = () => {
           Submit
         </button>
       </div>
+      <style>{`
+        @keyframes slideUp {
+          from { transform: translateY(100%); opacity: 0; }
+          to { transform: translateY(0); opacity: 1; }
+        }
+        .animate-slideUp {
+          animation: slideUp 0.3s cubic-bezier(0.4,0,0.2,1);
+        }
+      `}</style>
     </div>
   );
 };
