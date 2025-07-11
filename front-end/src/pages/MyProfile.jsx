@@ -94,7 +94,6 @@ const MyProfile = () => {
   // Format mm-dd-yyyy to dd-mm-yyyy
   const formatDate = (dateStr) => {
     if (!dateStr) return '';
-    // Accepts mm-dd-yyyy, yyyy-mm-dd, dd-mm-yyyy, etc.
     let d, m, y;
     if (dateStr.includes('-')) {
       const parts = dateStr.split('-');
@@ -104,13 +103,18 @@ const MyProfile = () => {
       } else if (parts[2].length === 4) {
         // mm-dd-yyyy or dd-mm-yyyy
         [m, d, y] = parts;
-        if (Number(m) > 12) [d, m] = [m, d]; // swap if dd-mm-yyyy
+        if (Number(m) > 12) [d, m] = [m, d];
       } else {
         [d, m, y] = parts;
       }
       return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
     }
-    return dateStr;
+    // If ISO or other format
+    const dateObj = new Date(dateStr);
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    return `${day}-${month}-${year}`;
   };
 
   const calculateTotalFine = () => {

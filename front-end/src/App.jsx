@@ -12,6 +12,7 @@ import About from './pages/About';
 import Search from './pages/Search';
 import MyProfile from './pages/MyProfile';
 import Books from './pages/Books';
+import Feedback from './components/Feedback';
 
 import { UserContext } from './context/UserContext';
 
@@ -39,6 +40,7 @@ const App = () => {
           <Route path='/books/:deptCode' element={<Books />} />
           <Route path='/myprofile' element={<MyProfile />} />
           <Route path='/searchbook' element={<Search />} />
+          <Route path='/feedback' element={<Feedback />} />
         </Routes>
       </main>
       {showNavbar && <Footer />}

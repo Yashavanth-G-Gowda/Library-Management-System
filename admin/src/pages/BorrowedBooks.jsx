@@ -99,8 +99,13 @@ const BorrowedBooks = ({ token }) => {
       }
       return `${d.padStart(2, '0')}-${m.padStart(2, '0')}-${y}`;
     }
-    return dateStr;
-  }
+    // If ISO or other format
+    const dateObj = new Date(dateStr);
+    const day = String(dateObj.getDate()).padStart(2, '0');
+    const month = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const year = dateObj.getFullYear();
+    return `${day}-${month}-${year}`;
+  };
 
   return (
     <div className="p-6">

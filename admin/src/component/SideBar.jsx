@@ -20,6 +20,18 @@ const SideBar = () => {
         <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/borrowed'>
           <p className='hidden md:block'>Borrowed Books</p>
         </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/book-requests'>
+          <p className='hidden md:block'>Book Requests</p>
+        </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/dept-requests'>
+          <p className='hidden md:block'>Departments Requets</p>
+        </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/notifications'>
+          <p className='hidden md:block'>Notifications</p>
+        </NavLink>
+        <NavLink className='flex items-center border gap-3 border-gray-300 border-r-0 px-3 py-2 rounded-l' to='/feedback'>
+          <p className='hidden md:block'>Feedback</p>
+        </NavLink>
       </div>
     </div>
   )

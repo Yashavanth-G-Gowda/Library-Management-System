@@ -1,9 +1,13 @@
-import React from 'react';
+import React, { useContext } from 'react';
+import { UserContext } from '../../context/UserContext';
+import axios from 'axios';
+import { toast } from 'react-toastify';
 
 const ShowBookDetails = ({ book, onClose }) => {
+  const { backendURL, userInfo } = useContext(UserContext);
   if (!book) return null;
 
-  const { title, author, edition, image, status, location } = book;
+  const { title, author, edition, image, status, location, branch } = book;
 
   // Proper ordinal suffix logic
   const getOrdinal = (n) => {
@@ -11,6 +15,24 @@ const ShowBookDetails = ({ book, onClose }) => {
     const v = n % 100;
     const suffix = v >= 11 && v <= 13 ? 'th' : suffixes[n % 10] || 'th';
     return `${n}${suffix}`;
+  };
+
+  const handleRequestBook = async () => {
+    if (!userInfo?.srn) {
+      toast.error('Please login to request a book.');
+      return;
+    }
+    try {
+      await axios.post(`${backendURL}/api/book-requests`, {
+        title,
+        author,
+        branch: Array.isArray(branch) ? branch.join(', ') : branch,
+        srn: userInfo.srn,
+      });
+      toast.success('Book request sent!');
+    } catch (err) {
+      toast.error('Failed to request book');
+    }
   };
 
   return (
@@ -47,7 +69,7 @@ const ShowBookDetails = ({ book, onClose }) => {
             ) : (
               <span
                 className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer hover:bg-blue-200 transition"
-                onClick={() => alert('Book Request Sent!')}
+                onClick={handleRequestBook}
               >
                 Request for Book
               </span>

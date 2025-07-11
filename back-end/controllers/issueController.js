@@ -116,7 +116,7 @@ Happy Reading!
           <p>Happy Reading! 📚</p>
 
           <p>Warm regards,<br/>
-          <strong>Library Team</strong><br/>
+          <strong>SJCE Library Team</strong><br/>
           JSS Science and Technology University</p>
 
           <hr style="margin-top: 20px;" />

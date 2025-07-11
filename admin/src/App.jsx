@@ -9,6 +9,10 @@ import {Routes,Route} from 'react-router-dom'
 import ListUsers from './pages/ListUsers';
 import IssueBook from './pages/IssueBook';
 import BorrowedBooks from './pages/BorrowedBooks';
+import BookRequests from './pages/bookRequests';
+import Feedback from './pages/Feedback';
+import DeptRequests from './pages/deptRequest';
+import Notifications from './pages/notifications';
 
 export const backendURL = import.meta.env.VITE_BACKEND_URL
 
@@ -46,6 +50,10 @@ const App = () => {
                 <Route path='/listusers' element={<ListUsers token={token} />} />
                 <Route path='/issuebook' element={<IssueBook token={token}/>} />
                 <Route path='/borrowed' element={<BorrowedBooks token={token}/>} />
+                <Route path='/book-requests' element={<BookRequests />} />
+                <Route path='/feedback' element={<Feedback />} />
+                <Route path='/dept-requests' element={<DeptRequests />} />
+                <Route path='/notifications' element={<Notifications />} />
               </Routes>
             </div>
           </div>

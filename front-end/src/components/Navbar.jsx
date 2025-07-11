@@ -33,10 +33,10 @@ const Navbar = () => {
           <p className='font-bold text-base'>ABOUT</p>
           <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
         </NavLink>
-        <div className="cursor-pointer" onClick={() => setIsFeedbackVisible(true)}>
-          <p className="font-bold text-base">FEEDBACK</p>
-          <hr className="w-2/4 border-none h-[1.5px] bg-gray-700 hidden" />
-        </div>
+        <NavLink to='/feedback' className='flex flex-col gap-1 items-center'>
+          <p className='font-bold text-base'>FEEDBACK</p>
+          <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
+        </NavLink>
       </ul>
       <div className='flex flex-row gap-6 mr-6 sm:hidden'>
         <img onClick={()=>navigate('/searchbook')} src={assets.search_icon} className='w-[21px]' alt="" />
@@ -68,7 +68,6 @@ const Navbar = () => {
             <Profile />
         }
       </div>
-      {isFeedbackVisible && <Feedback />}
       {loginComp && <Login/>}
     </div>
   )
