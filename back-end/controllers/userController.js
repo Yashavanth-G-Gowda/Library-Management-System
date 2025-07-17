@@ -1,6 +1,7 @@
 import validator from 'validator'
 import UserModel from "../models/userModel.js";
-import jwt from 'jsonwebtoken'
+import IssueBookModel from "../models/issueBookModel.js";
+import jwt from 'jsonwebtoken';
 import bcrypt from 'bcrypt'
 
 const createToken = (id) => {
@@ -10,17 +11,29 @@ const createToken = (id) => {
 // Route for login user
 const loginUser = async (req, res) => {
   try {
-    const { srn, password } = req.body;
+    const { srn, password, usertype } = req.body;
 
     if (!srn || !password) {
       return res.json({ success: false, message: "SRN and password are required" });
     }
 
-    // Check only SRN
-    const user = await UserModel.findOne({ srn });
+    // First try to find user with userType (for new accounts)
+    let user = await UserModel.findOne({ srn, userType: usertype });
+
+    // If not found, try to find user without userType (for existing accounts)
+    if (!user) {
+      user = await UserModel.findOne({ srn, userType: { $exists: false } });
+      
+      // If found, update the user with the userType
+      if (user) {
+        console.log(`Updating existing user ${srn} with userType: ${usertype}`);
+        user.userType = usertype;
+        await user.save();
+      }
+    }
 
     if (!user) {
-      return res.json({ success: false, message: "No user found with this SRN" });
+      return res.json({ success: false, message: `No ${usertype} found with this ${usertype === 'faculty' ? 'FR' : 'SR'} number` });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
@@ -40,18 +53,36 @@ const loginUser = async (req, res) => {
 // Route for registered user
 const registerUser = async(req,res) => {
     try {
-        const {srn, email, password} = req.body;
+        const {srn, email, password, usertype} = req.body;
         console.log("BODY", req.body);
+        
+        if (!usertype || !['student', 'faculty'].includes(usertype)) {
+            return res.json({success:false, message: "Invalid user type. Must be 'student' or 'faculty'"})
+        }
+        
+        // Check for existing users more comprehensively
         const emailExists = await UserModel.findOne({email});
         const srnExists = await UserModel.findOne({srn});
+        
         if(emailExists || srnExists) {
             if(emailExists) {
                 return res.json({success:false, message: "Email is already associated with another user!"})
             }
             if(srnExists) {
-                return res.json({success:false, message: "SR number is already registered by an user!"})
+                // Check if the existing user has a userType
+                if (srnExists.userType) {
+                    return res.json({success:false, message: `${usertype === 'faculty' ? 'FR' : 'SR'} number is already registered by a ${srnExists.userType}!`})
+                } else {
+                    // If existing user doesn't have userType, update it and return success
+                    console.log(`Updating existing user ${srn} with userType: ${usertype}`);
+                    srnExists.userType = usertype;
+                    await srnExists.save();
+                    const token = createToken(srnExists._id);
+                    return res.json({ success: true, token, message: "Account updated successfully!" });
+                }
             }
         }
+        
         if(!validator.isEmail(email)){
             return res.json({success:false, message: "Please enter a valid Email address!!"})
         }
@@ -64,7 +95,8 @@ const registerUser = async(req,res) => {
         const newUser = new UserModel({
             srn,
             email,
-            password: hashedPassword // ✅ correct field name and value
+            password: hashedPassword,
+            userType: usertype
         });
         const user = await newUser.save();
         const token = createToken(user._id);
@@ -96,11 +128,26 @@ const getUserDetails = async (req, res) => {
 const updateUserDetails = async (req, res) => {
   try {
     const userId = req.userId; // Provided by middleware
-    const { name, email, phone, branch, sem } = req.body;
+    const { name, email, phone, branch, sem, designation } = req.body;
+
+    // Get current user to determine userType
+    const currentUser = await UserModel.findById(userId);
+    if (!currentUser) {
+      return res.json({ success: false, message: 'User not found' });
+    }
+
+    // Prepare update object based on user type
+    const updateData = { name, email, phone, branch };
+    
+    if (currentUser.userType === 'student') {
+      updateData.sem = sem;
+    } else {
+      updateData.designation = designation;
+    }
 
     const updatedUser = await UserModel.findByIdAndUpdate(
       userId,
-      { name, email, phone, branch, sem },
+      updateData,
       { new: true }
     );
 
@@ -192,6 +239,36 @@ const getUserWithBorrowedBooks = async (req, res) => {
   }
 };
 
+const getUserBorrowingHistory = async (req, res) => {
+  try {
+    const token = req.headers.token;
+    if (!token) return res.json({ success: false, message: 'No token provided' });
+
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    const user = await UserModel.findById(decoded.id).select('-password');
+
+    if (!user) return res.json({ success: false, message: 'User not found' });
+
+    // Get all issued books for this user that are not currently borrowed
+    const currentBorrowedBookNumbers = Array.from(user.booksBorrowed?.keys() || []);
+    
+    const issuedBooks = await IssueBookModel.find({ srn: user.srn });
+    
+    // Filter out currently borrowed books to get only returned books
+    const returnedBooks = issuedBooks.filter(book => 
+      !currentBorrowedBookNumbers.includes(book.issuedBookNumber)
+    );
+
+    res.json({ 
+      success: true, 
+      returnedBooks: returnedBooks
+    });
+  } catch (error) {
+    console.log(error.message);
+    res.json({ success: false, message: error.message });
+  }
+};
+
 const adminLogin = async(req,res) => {
     try {
         const {userId,password} = req.body
@@ -208,4 +285,4 @@ const adminLogin = async(req,res) => {
     }
 }
 
-export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers, getUserBySRN, getUserWithBorrowedBooks} 
+export {loginUser, registerUser, getUserDetails, updateUserDetails, adminLogin, getAllUsers, getUserBySRN, getUserWithBorrowedBooks, getUserBorrowingHistory} 

@@ -239,56 +239,6 @@ const Home = () => {
       </div>
 
       <div className="max-w-6xl mx-auto px-4 py-8 space-y-8">
-        {/* Newly Arrived Books Section */}
-        <section>
-          <div className="flex items-center justify-between mb-6">
-            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-              <FaBook className="text-blue-600" />
-              Newly Arrived Books
-            </h2>
-          </div>
-          {newlyArrivedBooks.length > 0 ? (
-            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-              {newlyArrivedBooks.slice(0, 5).map((book, index) => (
-                <BookCard key={index} book={book} type="new" />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-8 text-gray-500">
-              <FaBook className="text-4xl mx-auto mb-4 text-gray-300" />
-              <p>No newly arrived books at the moment</p>
-            </div>
-          )}
-          {/* Book Details Modal */}
-          {selectedBook && (
-            <ShowBookDetails book={selectedBook} onClose={() => setSelectedBook(null)} />
-          )}
-        </section>
-
-        {/* Book Recommendations Section */}
-        {token && (
-          <section>
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
-                <FaLightbulb className="text-yellow-500" />
-                Recommended for You
-              </h2>
-            </div>
-            {recommendedBooks.length > 0 ? (
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                {recommendedBooks.slice(0, 5).map((book, index) => (
-                  <BookCard key={index} book={book} type="recommended" />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 text-gray-500">
-                <FaLightbulb className="text-4xl mx-auto mb-4 text-gray-300" />
-                <p>Start borrowing books to get personalized recommendations</p>
-              </div>
-            )}
-          </section>
-        )}
-
         {/* E-Resources Section */}
         <section>
           <div className="bg-gradient-to-r from-green-500 to-emerald-600 rounded-xl p-8 text-white">
@@ -317,13 +267,67 @@ const Home = () => {
           </div>
         </section>
 
+        {/* Newly Arrived Books Section */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <FaBook className="text-blue-600" />
+              Newly Arrived Books
+            </h2>
+          </div>
+          {newlyArrivedBooks.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {newlyArrivedBooks.slice(0, 5).map((book, index) => (
+                <BookCard key={index} book={book} type="new" />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FaBook className="text-4xl mx-auto mb-4 text-gray-300" />
+              <p>No newly arrived books at the moment</p>
+            </div>
+          )}
+          {/* Book Details Modal */}
+          {selectedBook && (
+            <ShowBookDetails book={selectedBook} onClose={() => setSelectedBook(null)} />
+          )}
+        </section>
+
+        {/* Book Recommendations Section */}
+        <section>
+          <div className="flex items-center justify-between mb-6">
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <FaLightbulb className="text-yellow-500" />
+              Recommended for You
+            </h2>
+            <button
+              onClick={fetchRecommendations}
+              className="bg-blue-100 text-blue-700 px-3 py-1 rounded hover:bg-blue-200 text-sm font-medium"
+            >
+              Refresh
+            </button>
+          </div>
+          {recommendedBooks.length > 0 ? (
+            <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+              {recommendedBooks.slice(0, 5).map((book, index) => (
+                <BookCard key={index} book={book} type="recommended" />
+              ))}
+            </div>
+          ) : (
+            <div className="text-center py-8 text-gray-500">
+              <FaLightbulb className="text-4xl mx-auto mb-4 text-gray-300" />
+              <p>No recommendations yet. Borrow or return books to get personalized suggestions!</p>
+            </div>
+          )}
+        </section>
+
         {/* Borrowed Books Section */}
         {token && (
           <section>
             <div className="flex items-center justify-between mb-6">
               <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
                 <FaBook className="text-blue-600" />
-                My Borrowed Books
+                <p className=''>My Borrowed Books</p>
                 {calculateTotalFine() > 0 && (
                   <span className="text-sm bg-red-100 text-red-600 px-2 py-1 rounded-full">
                     Fine: ₹{calculateTotalFine()}
@@ -349,7 +353,7 @@ const Home = () => {
             )}
           </section>
         )}
-
+        
         {/* Show All Books Section */}
         <section>
           <div className="bg-gradient-to-r from-purple-500 to-pink-600 rounded-xl p-8 text-white">
@@ -376,8 +380,10 @@ const Home = () => {
         </section>
       </div>
 
-      {/* Feedback Component */}
-      <Feedback />
+          
+
+      {/* Feedback Component
+      <Feedback /> */}
     </div>
   )
 }

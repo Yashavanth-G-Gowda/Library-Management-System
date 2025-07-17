@@ -11,7 +11,7 @@ const Profile = () => {
     navigate('/')
   }
 
-  const {navigate,token,setToken} = useContext(UserContext)
+  const {navigate,token,setToken, userInfo} = useContext(UserContext)
 
   return (
     <div className='group relative'>
@@ -22,7 +22,7 @@ const Profile = () => {
           className="w-6 rounded-full object-cover border border-gray-300"
         />
         <span className="text-xs font-medium text-gray-800 hidden md:inline">
-          Demo User
+          {userInfo?.name || 'User'}
         </span>
       </div>
       <div className='group-hover:block hidden absolute dropdown-menu right-0 pt-4'>

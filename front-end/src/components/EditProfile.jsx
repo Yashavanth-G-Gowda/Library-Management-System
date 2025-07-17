@@ -22,7 +22,19 @@ const departments = [
 
 const semesters = Array.from({ length: 8 }, (_, i) => `${i + 1}`);
 
-const EditProfile = ({ editForm, setEditForm, onSave, onCancel }) => {
+const designations = [
+  'Assistant Professor',
+  'Associate Professor',
+  'Professor',
+  'Head of Department',
+  'Dean',
+  'Lecturer',
+  'Senior Lecturer',
+  'Research Scholar',
+  'Teaching Assistant'
+];
+
+const EditProfile = ({ editForm, setEditForm, onSave, onCancel, userType = 'student' }) => {
   return (
     <div className="fixed inset-0 flex items-center justify-center bg-black bg-opacity-40 z-50">
       <div className="bg-gray-300 shadow-xl rounded-lg p-6 w-[90%] max-w-md">
@@ -69,27 +81,50 @@ const EditProfile = ({ editForm, setEditForm, onSave, onCancel }) => {
             </datalist>
           </div>
 
-          {/* Semester Dropdown */}
-          <div className="flex flex-col">
-            <label htmlFor="sem" className="text-sm font-medium text-gray-700">
-              Semester
-            </label>
-            <input
-              list="sem-options"
-              id="sem"
-              value={editForm.sem}
-              onChange={(e) =>
-                setEditForm((prev) => ({ ...prev, sem: e.target.value }))
-              }
-              className="px-3 py-2 mt-1 rounded-md border border-gray-400 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-              placeholder="Select semester (1-8)"
-            />
-            <datalist id="sem-options">
-              {semesters.map((s, index) => (
-                <option key={index} value={s} />
-              ))}
-            </datalist>
-          </div>
+          {/* Semester/Designation Dropdown based on user type */}
+          {userType === 'student' ? (
+            <div className="flex flex-col">
+              <label htmlFor="sem" className="text-sm font-medium text-gray-700">
+                Semester
+              </label>
+              <input
+                list="sem-options"
+                id="sem"
+                value={editForm.sem}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, sem: e.target.value }))
+                }
+                className="px-3 py-2 mt-1 rounded-md border border-gray-400 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Select semester (1-8)"
+              />
+              <datalist id="sem-options">
+                {semesters.map((s, index) => (
+                  <option key={index} value={s} />
+                ))}
+              </datalist>
+            </div>
+          ) : (
+            <div className="flex flex-col">
+              <label htmlFor="designation" className="text-sm font-medium text-gray-700">
+                Designation
+              </label>
+              <input
+                list="designation-options"
+                id="designation"
+                value={editForm.designation}
+                onChange={(e) =>
+                  setEditForm((prev) => ({ ...prev, designation: e.target.value }))
+                }
+                className="px-3 py-2 mt-1 rounded-md border border-gray-400 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                placeholder="Select designation"
+              />
+              <datalist id="designation-options">
+                {designations.map((desig, index) => (
+                  <option key={index} value={desig} />
+                ))}
+              </datalist>
+            </div>
+          )}
         </div>
 
         {/* Action Buttons */}

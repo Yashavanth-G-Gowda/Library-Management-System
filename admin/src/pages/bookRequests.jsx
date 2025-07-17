@@ -17,7 +17,14 @@ const BookRequests = () => {
           setError('Failed to fetch book requests');
         }
       } catch (err) {
-        setError('Failed to fetch book requests');
+        let message = 'Failed to fetch book requests';
+        if (err.response && err.response.data && err.response.data.message) {
+          message += ': ' + err.response.data.message;
+        } else if (err.message) {
+          message += ': ' + err.message;
+        }
+        setError(message);
+        console.error('Book Requests Fetch Error:', err);
       } finally {
         setLoading(false);
       }
@@ -71,4 +78,3 @@ const BookRequests = () => {
 };
 
 export default BookRequests; 
-

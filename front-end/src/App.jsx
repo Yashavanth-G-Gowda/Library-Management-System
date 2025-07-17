@@ -13,6 +13,8 @@ import Search from './pages/Search';
 import MyProfile from './pages/MyProfile';
 import Books from './pages/Books';
 import Feedback from './components/Feedback';
+import BorrowedBooks from './pages/BorrowedBooks';
+import BorrowingHistory from './pages/BorrowingHistory';
 
 import { UserContext } from './context/UserContext';
 
@@ -39,6 +41,8 @@ const App = () => {
           <Route path='/about' element={<About />} />
           <Route path='/books/:deptCode' element={<Books />} />
           <Route path='/myprofile' element={<MyProfile />} />
+          <Route path='/borrowed-books' element={<BorrowedBooks />} />
+          <Route path='/borrowing-history' element={<BorrowingHistory />} />
           <Route path='/searchbook' element={<Search />} />
           <Route path='/feedback' element={<Feedback />} />
         </Routes>

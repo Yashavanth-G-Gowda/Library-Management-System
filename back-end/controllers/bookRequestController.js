@@ -1,13 +1,24 @@
 import BookRequestModel from '../models/bookRequestModel.js';
 import BookModel from '../models/bookModel.js';
+import UserModel from '../models/userModel.js';
 
 // POST: Add or update a book request
 export const addBookRequest = async (req, res) => {
   try {
-    let { title, author, srn } = req.body;
-    if (!title || !author || !srn) {
-      return res.status(400).json({ success: false, message: 'Title, author, and SRN are required.' });
+    let { title, author } = req.body;
+    const userId = req.userId; // Provided by auth middleware
+    
+    if (!title || !author) {
+      return res.status(400).json({ success: false, message: 'Title and author are required.' });
     }
+
+    // Get user details from database
+    const user = await UserModel.findById(userId).select('srn');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const srn = user.srn;
     // Normalize for lookup
     title = title.trim().toLowerCase();
     author = author.trim().toLowerCase();
@@ -49,23 +60,38 @@ export const deleteAllBookRequests = async (req, res) => {
 export const listBookRequests = async (req, res) => {
   try {
     const requests = await BookRequestModel.find().sort({ count: -1, updatedAt: -1 });
-    // Enrich with image and branch if book exists
-    const enriched = await Promise.all(requests.map(async (req) => {
+    // Enrich with image and branch if book exists, and filter out deleted books
+    const enriched = [];
+    
+    for (const req of requests) {
       // Try to find book with case-insensitive matching
       const book = await BookModel.findOne({
         title: { $regex: new RegExp(`^${req.title}$`, 'i') },
         author: { $regex: new RegExp(`^${req.author}$`, 'i') }
       });
-      
-      return {
-        _id: req._id,
-        title: req.title,
-        author: req.author,
-        count: req.count,
-        image: book?.image || '',
-        branch: book?.branch || [],
-      };
-    }));
+
+      if (book) {
+        enriched.push({
+          _id: req._id,
+          title: book.title, // Use the actual book title with proper case
+          author: book.author, // Use the actual book author with proper case
+          count: req.count,
+          image: book.image || '',
+          branch: book.branch || [],
+        });
+      } else {
+        // Book not found in collection, still include the request
+        enriched.push({
+          _id: req._id,
+          title: req.title, // Use the requested title
+          author: req.author, // Use the requested author
+          count: req.count,
+          image: '',
+          branch: [],
+        });
+      }
+    }
+    
     return res.status(200).json({ success: true, requests: enriched });
   } catch (err) {
     return res.status(500).json({ success: false, message: 'Server error', error: err.message });

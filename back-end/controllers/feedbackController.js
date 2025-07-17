@@ -1,16 +1,35 @@
 import FeedbackModel from '../models/feedbackModel.js';
 
+import UserModel from '../models/userModel.js';
+
 // POST: Submit feedback
 export const submitFeedback = async (req, res) => {
   try {
-    const { message, user } = req.body;
+    const { message } = req.body;
+    const userId = req.userId; // Provided by auth middleware
+    
     if (!message) {
       return res.status(400).json({ success: false, message: 'Message is required.' });
     }
-    const feedback = new FeedbackModel({ message, user });
+
+    // Get user details from database
+    const user = await UserModel.findById(userId).select('name srn email');
+    if (!user) {
+      return res.status(404).json({ success: false, message: 'User not found.' });
+    }
+
+    const feedback = new FeedbackModel({ 
+      message, 
+      user: {
+        name: user.name,
+        srn: user.srn,
+        email: user.email
+      }
+    });
     await feedback.save();
     return res.status(201).json({ success: true, feedback });
   } catch (err) {
+    console.error('Feedback submission error:', err);
     return res.status(500).json({ success: false, message: 'Server error', error: err.message });
   }
 };

@@ -3,6 +3,8 @@ import { v2 as cloudinary } from 'cloudinary';
 import fs from "fs";
 import UserModel from "../models/userModel.js";
 import sendEmail from "../config/sendEmail.js";
+import IssueBookModel from "../models/issueBookModel.js";
+import jwt from 'jsonwebtoken';
 
 const addBooks = async (req, res) => {
   try {
@@ -166,6 +168,28 @@ const deleteBooks = async (req, res) => {
       return res.json({ success: false, message: "Book not found" });
     }
 
+    // Check if any copies are currently borrowed
+    if (book.issuedBookNumbers && book.issuedBookNumbers.length > 0) {
+      return res.json({ 
+        success: false, 
+        message: `Cannot delete book. ${book.issuedBookNumbers.length} copy/copies are currently borrowed. Please wait for all copies to be returned.` 
+      });
+    }
+
+    // If deleting selected book numbers, check if any of them are borrowed
+    if (bookNumbers.length > 0) {
+      const borrowedSelected = bookNumbers.filter(bn => 
+        book.issuedBookNumbers && book.issuedBookNumbers.includes(bn)
+      );
+      
+      if (borrowedSelected.length > 0) {
+        return res.json({ 
+          success: false, 
+          message: `Cannot delete selected copies. The following book numbers are currently borrowed: ${borrowedSelected.join(', ')}. Please wait for them to be returned.` 
+        });
+      }
+    }
+
     // Delete all copies of the book
     if (all) {
       await BookModel.findByIdAndDelete(id);
@@ -281,7 +305,6 @@ const getBookRecommendations = async (req, res) => {
       return res.json({ success: false, message: 'No token provided' });
     }
 
-    const jwt = await import('jsonwebtoken');
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
     const user = await UserModel.findById(decoded.id).select('-password');
 
@@ -289,7 +312,7 @@ const getBookRecommendations = async (req, res) => {
       return res.json({ success: false, message: 'User not found' });
     }
 
-    // Get user's borrowed books history
+    // Get user's currently borrowed books
     const userBorrowedBooks = [];
     if (user.booksBorrowed && user.booksBorrowed.size > 0) {
       for (const [bookNumber, bookData] of user.booksBorrowed.entries()) {
@@ -300,12 +323,29 @@ const getBookRecommendations = async (req, res) => {
       }
     }
 
-    // Extract tags and authors from user's history
+    // Get user's returned books (borrowing history)
+    const issuedBooks = await IssueBookModel.find({ srn: user.srn });
+    const returnedBooks = [];
+    for (const issued of issuedBooks) {
+      // If not currently borrowed (not in booksBorrowed)
+      if (!user.booksBorrowed?.has(issued.issuedBookNumber)) {
+        const book = await BookModel.findOne({ isbn: issued.isbn });
+        if (book) {
+          returnedBooks.push(book);
+        }
+      }
+    }
+
+    // Combine all books for tag extraction
+    const allHistoryBooks = [...userBorrowedBooks, ...returnedBooks];
+    const excludeBookIds = allHistoryBooks.map(book => book._id);
+
+    // Extract tags, authors, branches
     const userTags = new Set();
     const userAuthors = new Set();
     const userBranches = new Set();
 
-    userBorrowedBooks.forEach(book => {
+    allHistoryBooks.forEach(book => {
       if (book.tags) {
         book.tags.forEach(tag => userTags.add(tag));
       }
@@ -317,10 +357,17 @@ const getBookRecommendations = async (req, res) => {
       }
     });
 
+    // Debug logs
+    console.log('Recommendation Debug:');
+    console.log('User tags:', Array.from(userTags));
+    console.log('User authors:', Array.from(userAuthors));
+    console.log('User branches:', Array.from(userBranches));
+    console.log('Excluded book IDs:', excludeBookIds);
+
     // Find books with similar tags, authors, or branches
     const recommendations = await BookModel.find({
       $and: [
-        { _id: { $nin: userBorrowedBooks.map(book => book._id) } }, // Exclude already borrowed
+        { _id: { $nin: excludeBookIds } }, // Exclude already borrowed or returned
         {
           $or: [
             { tags: { $in: Array.from(userTags) } },
@@ -331,12 +378,13 @@ const getBookRecommendations = async (req, res) => {
       ]
     }).limit(10);
 
+    console.log('Number of recommendations found:', recommendations.length);
+
     // If not enough recommendations, add some popular books
     if (recommendations.length < 5) {
       const popularBooks = await BookModel.find({
-        _id: { $nin: [...userBorrowedBooks.map(book => book._id), ...recommendations.map(book => book._id)] }
+        _id: { $nin: [...excludeBookIds, ...recommendations.map(book => book._id)] }
       }).limit(10 - recommendations.length);
-      
       recommendations.push(...popularBooks);
     }
 

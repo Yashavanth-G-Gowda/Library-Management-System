@@ -1,5 +1,6 @@
 import React, { useRef, useState, useContext, useEffect } from 'react';
 import { FaEdit, FaChevronDown, FaChevronUp, FaBook, FaCalendarAlt, FaRupeeSign } from 'react-icons/fa';
+import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 import { UserContext } from '../context/UserContext';
@@ -21,9 +22,12 @@ const MyProfile = () => {
     name: '',
     branch: '',
     sem: '',
+    designation: '',
     phone: '',
     email: ''
   });
+
+  const navigate = useNavigate();
 
   useEffect(() => {
     if (userInfo?.image) setProfileImage(userInfo.image);
@@ -32,6 +36,7 @@ const MyProfile = () => {
         name: userInfo.name || '',
         branch: userInfo.branch || '',
         sem: userInfo.sem || '',
+        designation: userInfo.designation || '',
         phone: userInfo.phone || '',
         email: userInfo.email || ''
       });
@@ -151,8 +156,22 @@ const MyProfile = () => {
   };
 
   const handleSave = () => {
+    const updateData = {
+      name: editForm.name,
+      branch: editForm.branch,
+      phone: editForm.phone,
+      email: editForm.email
+    };
+
+    // Add semester for students or designation for faculty
+    if (userInfo?.userType === 'student') {
+      updateData.sem = editForm.sem;
+    } else {
+      updateData.designation = editForm.designation;
+    }
+
     axios
-      .put(`${backendURL}/api/user/userUpdate`, editForm, {headers: {token}})
+      .put(`${backendURL}/api/user/userUpdate`, updateData, {headers: {token}})
       .then((res) => {
         if (res.data.success) {
           toast.success("Profile updated successfully");
@@ -191,7 +210,7 @@ const MyProfile = () => {
         </div>
 
         <div className="pl-4 flex flex-col text-left">
-          <h2 className="text-lg mb-1 font-bold">{userInfo?.name || 'Demo User'}</h2>
+          <h2 className="text-lg mb-1 font-bold">{userInfo?.name || ''}</h2>
           <p className="text-sm font-semibold text-gray-600">{userInfo?.srn || 'SRN1234'}</p>
         </div>
       </div>
@@ -218,7 +237,11 @@ const MyProfile = () => {
       {showMore && (
         <div className="mt-6 text-sm font-medium ml-7 space-y-2">
           <p><strong>Branch:</strong> {userInfo?.branch || 'Branch'}</p>
-          <p><strong>Semester:</strong> {userInfo?.sem || 'Semester'}</p>
+          {userInfo?.userType === 'student' ? (
+            <p><strong>Semester:</strong> {userInfo?.sem || 'Semester'}</p>
+          ) : (
+            <p><strong>Designation:</strong> {userInfo?.designation || 'Designation'}</p>
+          )}
           <p><strong>Phone:</strong> {userInfo?.phone || 'Phone number'}</p>
           <p><strong>Email:</strong> {userInfo?.email || 'email@example.com'}</p>
           {calculateTotalFine() > 0 && (
@@ -229,91 +252,19 @@ const MyProfile = () => {
         </div>
       )}
 
-      <hr className="mt-6 mx-3 border-t-2 border-gray-300" />
-
-      {/* Borrowed Books Section */}
-      <div className="mt-6">
-        <div className="flex items-center gap-2 mb-4 ml-3">
-          <FaBook className="text-blue-600" />
-          <h3 className="text-lg font-semibold text-gray-800">Borrowed Books</h3>
-          <button
-            onClick={fetchBorrowedBooks}
-            className="ml-auto mr-3 text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded hover:bg-blue-200"
-          >
-            Refresh
-          </button>
-        </div>
-
-        {loading ? (
-          <div className="text-center py-4 text-gray-500">Loading borrowed books...</div>
-        ) : borrowedBooks.length > 0 ? (
-          <div className="space-y-3 max-h-96 overflow-y-auto">
-            {borrowedBooks.map((borrowedBook, index) => {
-              console.log('BorrowedBook:', borrowedBook);
-              return (
-                <div key={index} className="bg-white rounded-lg shadow-sm border p-3 mx-3">
-                  <div className="flex items-start gap-3">
-                    <img
-                      src={borrowedBook.bookDetails?.image || assets.book_placeholder}
-                      alt={borrowedBook.bookDetails?.title || 'Book'}
-                      className="w-12 h-16 object-cover rounded"
-                    />
-                    <div className="flex-1 min-w-0">
-                      <h4 className="font-semibold text-sm text-gray-800 truncate">
-                        {borrowedBook.bookDetails?.title || 'Unknown Book'}
-                      </h4>
-                      <p className="text-xs text-gray-600">
-                        <span className="font-medium">Book Number:</span> {borrowedBook.bookNumber}
-                      </p>
-                      <p className="text-xs text-gray-600">
-                        <span className="font-medium">Author:</span> {borrowedBook.bookDetails?.author || 'Unknown'}
-                      </p>
-                      <div className="grid grid-cols-2 gap-2 mt-2 text-xs">
-                        <div className="flex items-center gap-1">
-                          <FaCalendarAlt className="text-blue-500" />
-                          <span className="text-gray-600">
-                            <span className="font-medium">Issued:</span> {borrowedBook.issuedDate ? formatDate(borrowedBook.issuedDate) : 'N/A'}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-1">
-                          <FaCalendarAlt className={`${isOverdue(borrowedBook.returnDate) ? 'text-red-500' : 'text-orange-500'}`} />
-                          <span className={`font-medium ${isOverdue(borrowedBook.returnDate) ? 'text-red-600' : 'text-orange-600'}`}>
-                            {isOverdue(borrowedBook.returnDate) ? 'OVERDUE' : 'Due'}: {formatDate(borrowedBook.returnDate)}
-                          </span>
-                        </div>
-                      </div>
-                      {borrowedBook.fine > 0 && (
-                        <div className="flex items-center gap-1 mt-1">
-                          <FaRupeeSign className="text-red-500 text-xs" />
-                          <span className="text-xs text-red-600 font-medium">
-                            Fine: ₹{borrowedBook.fine}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-4 text-gray-500 mx-3">
-            No books currently borrowed
-          </div>
-        )}
-      </div>
-
       {/* Edit Modal */}
       {isEditing && (
         <EditProfile
           editForm={editForm}
           setEditForm={setEditForm}
           onSave={handleSave}
+          userType={userInfo?.userType || 'student'}
           onCancel={() => {
             setEditForm({
               name: userInfo.name || '',
               branch: userInfo.branch || '',
               sem: userInfo.sem || '',
+              designation: userInfo.designation || '',
               phone: userInfo.phone || '',
               email: userInfo.email || ''
             });
@@ -321,6 +272,24 @@ const MyProfile = () => {
           }}
         />
       )}
+
+      {/* Action Buttons */}
+      <div className="mt-8 flex flex-col gap-3">
+        <button
+          onClick={() => navigate('/borrowed-books')}
+          className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition font-medium"
+        >
+          <FaBook />
+          Borrowed Books
+        </button>
+        <button
+          onClick={() => navigate('/borrowing-history')}
+          className="flex items-center justify-center gap-2 w-full py-3 px-4 bg-green-600 text-white rounded-lg hover:bg-green-700 transition font-medium"
+        >
+          <FaCalendarAlt />
+          History
+        </button>
+      </div>
     </div>
   );
 };

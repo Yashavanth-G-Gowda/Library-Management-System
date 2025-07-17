@@ -36,14 +36,15 @@ const Login = () => {
   };
 
   const handleRequestOtp = async (e) => {
-    e.preventDefault();
+    if (e) e.preventDefault();
 
-    if (!email || !srn || !password) {
+    const trimmedEmail = email.trim();
+    if (!trimmedEmail || !srn || !password) {
       return toast.error('Fill all fields');
     }
 
     try {
-      const res = await axios.post(`${backendURL}/api/auth/send-otp`, { email });
+      const res = await axios.post(`${backendURL}/api/auth/send-otp`, { email: trimmedEmail });
 
       if (res.data.success) {
         toast.success('OTP sent to your email!');
@@ -52,24 +53,43 @@ const Login = () => {
         toast.error(res.data.message);
       }
     } catch (err) {
-      toast.error('Failed to send OTP');
+      console.error('OTP request error:', err);
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('Failed to send OTP. Please try again.');
+      }
     }
   };
 
   const handleVerifyOtpAndRegister = async (e) => {
     e.preventDefault();
 
-    if (otp.length !== 6) return toast.error('Enter 6-digit OTP');
+    const trimmedEmail = email.trim();
+    const trimmedOtp = otp.trim();
+
+    if (trimmedOtp.length !== 6) {
+      toast.error('Please enter a 6-digit OTP');
+      return;
+    }
+
+    if (!/^\d{6}$/.test(trimmedOtp)) {
+      toast.error('OTP must contain only numbers');
+      return;
+    }
 
     try {
+      console.log('Verifying OTP:', { email: trimmedEmail, otp: trimmedOtp });
       const verifyRes = await axios.post(`${backendURL}/api/auth/verify-otp`, {
-        email,
-        otp,
+        email: trimmedEmail,
+        otp: trimmedOtp,
       });
 
       if (verifyRes.data.success) {
+        console.log('OTP verified, registering user...');
         const registerRes = await axios.post(`${backendURL}/api/user/register`, {
           srn,
+          email: trimmedEmail,
           email,
           password,
           usertype: userstate,
@@ -78,7 +98,7 @@ const Login = () => {
         if (registerRes.data.success) {
           setToken(registerRes.data.token);
           localStorage.setItem('token', registerRes.data.token);
-          toast.success('Account created successfully!');
+          toast.success(registerRes.data.message || 'Account created successfully!');
           setLoginComp(false);
         } else {
           toast.error(registerRes.data.message);
@@ -87,7 +107,12 @@ const Login = () => {
         toast.error(verifyRes.data.message);
       }
     } catch (err) {
-      toast.error('OTP verification failed');
+      console.error('OTP verification error:', err);
+      if (err.response?.data?.message) {
+        toast.error(err.response.data.message);
+      } else {
+        toast.error('OTP verification failed. Please try again.');
+      }
     }
   };
 
@@ -96,7 +121,15 @@ const Login = () => {
       <div className="relative w-full max-w-sm bg-white px-6 py-8 rounded-2xl shadow-xl transition-all">
         {/* ❌ Close Button */}
         <button
-          onClick={() => setLoginComp(false)}
+          onClick={() => {
+            setLoginComp(false);
+            // Clear form data when closing
+            setSRN('');
+            setPassword('');
+            setEmail('');
+            setOtp('');
+            setStep('login');
+          }}
           className="absolute top-3 right-4 text-gray-500 text-2xl font-bold hover:text-red-500 transition"
         >
           x
@@ -221,7 +254,10 @@ const Login = () => {
             </p>
             <input
               value={otp}
-              onChange={(e) => setOtp(e.target.value)}
+              onChange={(e) => {
+                const value = e.target.value.replace(/\D/g, ''); // Only allow digits
+                setOtp(value);
+              }}
               type="text"
               placeholder="Enter 6-digit OTP"
               className="w-full px-4 py-3 rounded-xl border border-gray-300 focus:outline-none focus:ring-2 focus:ring-black"
@@ -232,6 +268,25 @@ const Login = () => {
             <button type="submit" className="w-full bg-black text-white font-medium rounded-xl py-3 hover:bg-gray-900 transition">
               Sign Up
             </button>
+            
+            <div className="w-full text-center text-sm text-gray-600">
+              <p
+                className="cursor-pointer text-blue-600 hover:underline"
+                onClick={() => {
+                  setStep('signup');
+                  setOtp('');
+                  // Don't clear other fields when going back
+                }}
+              >
+                ← Back to Sign Up
+              </p>
+              <p
+                className="cursor-pointer text-blue-600 hover:underline mt-2"
+                onClick={handleRequestOtp}
+              >
+                Resend OTP
+              </p>
+            </div>
           </form>
         )}
       </div>

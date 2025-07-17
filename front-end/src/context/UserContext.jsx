@@ -76,8 +76,8 @@ const UserContextProvider = (props) => {
       );
 
       if (response.data.success) {
-        const { name, srn, email, sem, branch, phone, image } = response.data.user;
-        setUserInfo({ name, srn, email, sem, branch, phone, image });
+        const { name, srn, email, sem, designation, userType, branch, phone, image } = response.data.user;
+        setUserInfo({ name, srn, email, sem, designation, userType, branch, phone, image });
       } else {
         toast.error("Failed to fetch user data.");
       }

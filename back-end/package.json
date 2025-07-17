@@ -8,7 +8,8 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
-    "server": "nodemon server.js"
+    "server": "nodemon server.js",
+    "migrate": "node migrateUsers.js"
   },
   "dependencies": {
     "axios": "^1.10.0",

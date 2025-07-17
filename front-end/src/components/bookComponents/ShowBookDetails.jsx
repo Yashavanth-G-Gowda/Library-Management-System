@@ -1,10 +1,11 @@
-import React, { useContext } from 'react';
+import React, { useContext, useState } from 'react';
 import { UserContext } from '../../context/UserContext';
 import axios from 'axios';
 import { toast } from 'react-toastify';
 
 const ShowBookDetails = ({ book, onClose }) => {
-  const { backendURL, userInfo } = useContext(UserContext);
+  const { backendURL, userInfo, setLoginComp } = useContext(UserContext);
+  const [isRequesting, setIsRequesting] = useState(false);
   if (!book) return null;
 
   const { title, author, edition, image, status, location, branch } = book;
@@ -20,18 +21,32 @@ const ShowBookDetails = ({ book, onClose }) => {
   const handleRequestBook = async () => {
     if (!userInfo?.srn) {
       toast.error('Please login to request a book.');
+      setLoginComp(true);
       return;
     }
+    
+    setIsRequesting(true);
     try {
       await axios.post(`${backendURL}/api/book-requests`, {
         title,
         author,
         branch: Array.isArray(branch) ? branch.join(', ') : branch,
-        srn: userInfo.srn,
+      }, {
+        headers: {
+          token: localStorage.getItem('token')
+        }
       });
       toast.success('Book request sent!');
     } catch (err) {
-      toast.error('Failed to request book');
+      console.error('Book request error:', err);
+      if (err.response?.status === 401) {
+        toast.error('Please login to request a book.');
+        setLoginComp(true);
+      } else {
+        toast.error('Failed to request book');
+      }
+    } finally {
+      setIsRequesting(false);
     }
   };
 
@@ -68,10 +83,19 @@ const ShowBookDetails = ({ book, onClose }) => {
               </span>
             ) : (
               <span
-                className="bg-blue-100 text-blue-600 px-3 py-1 rounded-full text-xs sm:text-sm font-medium cursor-pointer hover:bg-blue-200 transition"
-                onClick={handleRequestBook}
+                className={`px-3 py-1 rounded-full text-xs sm:text-sm font-medium transition ${
+                  !userInfo?.srn
+                    ? 'bg-gray-100 text-gray-500 cursor-not-allowed'
+                    : isRequesting
+                    ? 'bg-blue-200 text-blue-700 cursor-wait'
+                    : 'bg-blue-100 text-blue-600 cursor-pointer hover:bg-blue-200'
+                }`}
+                onClick={!userInfo?.srn ? () => {
+                  toast.error('Please login to request a book.');
+                  setLoginComp(true);
+                } : handleRequestBook}
               >
-                Request for Book
+                {isRequesting ? 'Requesting...' : 'Request for Book'}
               </span>
             )}
 

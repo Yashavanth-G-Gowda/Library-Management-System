@@ -2,6 +2,7 @@ import IssuedBookModel from '../models/issueBookModel.js';
 import UserModel from '../models/userModel.js';
 import BookModel from '../models/bookModel.js';
 import BookRequestModel from '../models/bookRequestModel.js';
+import ReturnedBookModel from '../models/returnedBookModel.js';
 import sendEmail from '../config/sendEmail.js';
 
 const getAllIssuedBooks = async (req, res) => {
@@ -42,11 +43,21 @@ const returnBook = async (req, res) => {
   }
 
   try {
-    // 1. Remove from IssuedBookModel
+    // 1. Find and remove from IssuedBookModel
     const removed = await IssuedBookModel.findOneAndDelete({ srn, issuedBookNumber: bookNumber });
     if (!removed) {
       return res.status(404).json({ success: false, message: "Issued book not found." });
     }
+
+    // 1.5. Save to ReturnedBookModel
+    await ReturnedBookModel.create({
+      srn: removed.srn,
+      issuedBookNumber: removed.issuedBookNumber,
+      isbn: removed.isbn,
+      issuedDate: removed.issuedDate,
+      returnDate: removed.returnDate,
+      returnedAt: new Date()
+    });
 
     // 2. Update book availability
     const updatedBook = await BookModel.findOneAndUpdate(
@@ -62,6 +73,8 @@ const returnBook = async (req, res) => {
     const user = await UserModel.findOne({ srn });
     if (user) {
       user.booksBorrowed.delete(bookNumber);
+      // Patch: Ensure userType exists to avoid validation error
+      if (!user.userType) user.userType = 'student';
       await user.save();
     }
 

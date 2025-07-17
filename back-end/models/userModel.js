@@ -2,8 +2,10 @@ import mongoose from 'mongoose';
 
 const userSchema = new mongoose.Schema({
   name: { type: String },
-  srn: { type: String, unique:true },
-  sem: { type: String },
+  srn: { type: String, unique: true },
+  sem: { type: String }, // For students only
+  designation: { type: String }, // For faculty only
+  userType: { type: String, enum: ['student', 'faculty'], required: true },
   branch: { type: String },
   phone: { type: String },
   email: { type: String, required: true, unique: true },
