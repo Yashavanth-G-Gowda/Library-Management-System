@@ -14,7 +14,10 @@ const ListUsers = () => {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const response = await axios.get(`${backendURL}/api/user/allusers`);
+        const token = localStorage.getItem('token');
+        const response = await axios.get(`${backendURL}/api/user/allusers`, {
+          headers: { token }
+        });
         setUsers(response.data.users || []);
       } catch (error) {
         console.error('Error fetching users:', error);

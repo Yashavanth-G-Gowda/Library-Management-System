@@ -10,7 +10,10 @@ const BookRequests = () => {
     const fetchRequests = async () => {
       try {
         const backendURL = import.meta.env.VITE_BACKEND_URL;
-        const res = await axios.get(`${backendURL}/api/book-requests`);
+        const token = localStorage.getItem('token');
+        const res = await axios.get(`${backendURL}/api/book-requests`, {
+          headers: { token }
+        });
         if (res.data.success) {
           setRequests(res.data.requests);
         } else {
