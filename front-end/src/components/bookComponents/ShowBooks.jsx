@@ -13,7 +13,7 @@ const ShowBooks = ({ book, onClick }) => {
 
   return (
     <div
-      className="cursor-pointer w-[124px] sm:w-[140px] flex-shrink-0 bg-white rounded-xl shadow-sm p-2 flex flex-col justify-between h-[220px] sm:h-[240px]"
+      className="cursor-pointer w-[150px] sm:w-[180px] flex-shrink-0 bg-white rounded-xl shadow-sm p-2 flex flex-col justify-between h-[220px] sm:h-[240px]"
       onClick={() => onClick(book)}
     >
       <div>
@@ -26,7 +26,6 @@ const ShowBooks = ({ book, onClick }) => {
         <p className="text-[10px] sm:text-xs text-gray-500 truncate">{author}</p>
         <p className="text-[10px] sm:text-xs text-gray-500">{getOrdinal(Number(edition))} Edition</p>
       </div>
-
       <p
         className={`text-[10px] sm:text-xs font-semibold text-center mt-2 px-2 py-[2px] rounded-full border 
         ${

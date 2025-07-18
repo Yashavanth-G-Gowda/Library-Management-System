@@ -29,23 +29,17 @@ const Navbar = () => {
           <p className='font-bold text-base'>COLLECTION</p>
           <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
         </NavLink>
-        <NavLink to='/about' className='flex flex-col gap-1 items-center'>
+        {/* <NavLink to='/about' className='flex flex-col gap-1 items-center'>
           <p className='font-bold text-base'>ABOUT</p>
           <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
-        </NavLink>
+        </NavLink> */}
         <NavLink to='/feedback' className='flex flex-col gap-1 items-center'>
           <p className='font-bold text-base'>FEEDBACK</p>
           <hr className='w-2/4 border-none h-[1.5px] bg-gray-700 hidden'/>
         </NavLink>
       </ul>
-      <div className='flex flex-row gap-6 mr-6 sm:hidden'>
+      <div className="flex flex-row gap-6 mr-6 sm:hidden">
         <img onClick={()=>navigate('/searchbook')} src={assets.search_icon} className='w-[21px]' alt="" />
-        <div className="relative w-fit">
-          <img src={assets.notify} className="w-[22px]" alt="Notifications" />
-          <p className="absolute -right-1 -top-1 w-4 h-4 flex items-center justify-center bg-red-600 text-white text-[8px] rounded-full">
-            7
-          </p>
-        </div>
       </div>
       <div className='flex items-center gap-4 hidden sm:flex'>
         <Search />
