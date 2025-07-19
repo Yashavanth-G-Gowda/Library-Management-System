@@ -253,7 +253,7 @@ const Home = () => {
                   Expand your knowledge beyond physical boundaries with our comprehensive e-library.
                 </p>
                 <button 
-                  onClick={() => window.open('https://sjce.ac.in/e-resources', '_blank')}
+                  onClick={() => window.open('https://ieeexplore.ieee.org/Xplore/home.jsp', '_blank') }
                   className="bg-white text-green-600 px-6 py-3 rounded-lg font-semibold hover:bg-gray-100 transition-colors flex items-center gap-2"
                 >
                   Explore E-Resources

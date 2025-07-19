@@ -6,6 +6,7 @@ import { toast } from 'react-toastify';
 import { UserContext } from '../context/UserContext';
 import { assets } from '../assets/assets';
 import EditProfile from '../components/EditProfile';
+import Feedback from '../components/Feedback';
 
 const backendURL = import.meta.env.VITE_BACKEND_URL;
 
@@ -188,7 +189,8 @@ const MyProfile = () => {
   };
 
   return (
-    <div className="p-4 rounded-xl max-w-md mx-auto">
+    <>
+      <div className="p-4 rounded-xl max-w-md mx-auto">
       {/* Profile Image + Name */}
       <div className="flex items-center pl-4 space-x-4">
         <div
@@ -291,7 +293,12 @@ const MyProfile = () => {
         </button>
       </div>
     </div>
+    {/* Feedback Section for mobile-friendly feedback */}
+    <div className="mt-8 sm:hidden">
+      <Feedback />
+    </div>
+    </>
   );
-};
+}
 
 export default MyProfile;

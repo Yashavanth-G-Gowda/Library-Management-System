@@ -152,6 +152,7 @@ const BorrowedBooks = ({ token }) => {
               <th className="p-3 border">Book Number</th>
               <th className="p-3 border">Issued Date</th>
               <th className="p-3 border">Return Date</th>
+              <th className="p-3 border">Fine Amount</th>
               <th className="p-3 border text-center">Action</th>
             </tr>
           </thead>
@@ -165,6 +166,7 @@ const BorrowedBooks = ({ token }) => {
                   <td className="p-3 border">{book.bookNumber}</td>
                   <td className="p-3 border">{formatDate(book.issuedDate)}</td>
                   <td className="p-3 border">{formatDate(book.returnDate)}</td>
+                  <td className="p-3 border">{typeof book.fine === 'number' ? `₹${book.fine}` : (book.fine ? `₹${book.fine}` : '-')}</td>
                   <td className="p-3 border text-center">
                     <button
                       onClick={() => handleReturnClick(book)}

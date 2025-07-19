@@ -5,7 +5,7 @@ import UserModel from '../models/userModel.js';
 // POST: Add or update a book request
 export const addBookRequest = async (req, res) => {
   try {
-    let { title, author } = req.body;
+    let { title, author, isbn } = req.body;
     const userId = req.userId; // Provided by auth middleware
     
     if (!title || !author) {
@@ -22,19 +22,40 @@ export const addBookRequest = async (req, res) => {
     // Normalize for lookup
     title = title.trim().toLowerCase();
     author = author.trim().toLowerCase();
+
+    // Try to find a matching book (by ISBN if provided, else by title/author)
+    let matchedBook = null;
+    if (isbn) {
+      matchedBook = await BookModel.findOne({ isbn });
+    }
+    if (!matchedBook) {
+      matchedBook = await BookModel.findOne({
+        title: { $regex: new RegExp(`^${title}$`, 'i') },
+        author: { $regex: new RegExp(`^${author}$`, 'i') }
+      });
+    }
     // Check if request for this book already exists
     let request = await BookRequestModel.findOne({ title, author });
     if (request) {
       // If user already requested, don't increment count
+      let updated = false;
       if (!request.requestedBy.includes(srn)) {
         request.count += 1;
         request.requestedBy.push(srn);
-        await request.save();
+        updated = true;
       }
+      // Patch missing isbn/image if found
+      if (matchedBook) {
+        if (!request.isbn && matchedBook.isbn) { request.isbn = matchedBook.isbn; updated = true; }
+        if (!request.image && matchedBook.image) { request.image = matchedBook.image; updated = true; }
+      }
+      if (updated) await request.save();
     } else {
       request = new BookRequestModel({
         title,
         author,
+        isbn: matchedBook ? matchedBook.isbn : isbn || '',
+        image: matchedBook ? matchedBook.image : '',
         requestedBy: [srn],
         count: 1
       });
